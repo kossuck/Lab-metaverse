@@ -1,0 +1,1219 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>XX과학고 과학실</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css">
+<style>
+:root{
+  --inv-h:80pt; --inv-bg:#3a3a3a; --popup-bg:rgba(18,18,18,.9); --slot-fill:#161616; --slot-line:#ffffff;
+  --desc-bg:rgba(0,0,0,.8); --select:#ffd400; --pad:rgba(58,58,58,.55); --txt:#f2f2f2;
+  --font:'Galmuri11','Galmuri9','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --btn-min:0px; --msg-size:15pt;
+}
+body.mobile{--msg-size:12pt}
+body.mobile.ml{--inv-h:60pt}
+body.a11y{--btn-min:44px}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#0d0d0d;color:var(--txt);font-family:var(--font);overflow:hidden;word-break:keep-all;
+  user-select:none;-webkit-user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+img,canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+button{font-family:var(--font)}
+
+/* 인벤토리 */
+#inv{position:fixed;left:0;top:0;width:100%;height:var(--inv-h);background:var(--inv-bg);z-index:30}
+.slot{position:absolute;background:var(--slot-fill);border:2px solid var(--slot-line);display:flex;align-items:center;justify-content:center}
+.slot img{width:80%;height:80%;cursor:pointer}
+.slot img.sel{outline:2px solid var(--select);outline-offset:1px}
+
+/* 메타버스 영역 */
+#world{position:fixed;left:0;right:0;bottom:0;top:var(--inv-h);background:#101010;overflow:hidden}
+#map{position:absolute;cursor:pointer}
+.olabel{position:absolute;transform:translate(-50%,-100%);width:max-content;background:rgba(0,0,0,.7);color:#fff;padding:3px 9px;font-size:12px;
+  white-space:nowrap;pointer-events:none;border-radius:3px;z-index:5}
+#hint{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.65);padding:7px 14px;font-size:13px;
+  border-radius:4px;display:none;pointer-events:none;z-index:6;white-space:nowrap}
+#pad{position:absolute;left:16px;bottom:16px;display:none;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);z-index:6}
+#pad button{background:var(--pad);border:none;color:#e8e8e8;font-size:18px;border-radius:6px;touch-action:none}
+#pad button:active,#pad button.on{background:rgba(110,110,110,.7)}
+#act{position:absolute;right:20px;bottom:calc(26px + 15pt);display:none;background:var(--pad);border:2px solid #fff;color:#fff;font-size:15px;
+  padding:14px 18px;border-radius:8px;z-index:6;touch-action:none}
+body.mobile #pad{display:grid}
+
+/* 가상 팝업창 */
+#popup{position:absolute;inset:0;background:var(--popup-bg);display:none;flex-direction:column;align-items:center;justify-content:center;
+  z-index:20;container-type:size;transform:translateY(100%);padding-top:calc(var(--msg-size)*1.45 + 30px)}
+.pp-stage{position:relative;width:min(92cqw,calc((100cqh - 96px)*1.6));aspect-ratio:16/10}
+.pp-stage .ill{position:absolute;inset:0;width:100%;height:100%}
+.pp-actions{min-height:64px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding-top:8px}
+.pp-note{font-size:12px;color:#bbb}
+#pclose{position:absolute;top:10px;right:12px;width:36px;height:36px;min-width:var(--btn-min);min-height:var(--btn-min);display:none;
+  align-items:center;justify-content:center;background:transparent;border:2px solid #fff;color:#fff;font-size:18px;cursor:pointer;z-index:3}
+.pitem,.psprite{position:absolute;transform:translate(-50%,-50%);aspect-ratio:1}
+.pitem img,.psprite img{width:100%;height:100%;display:block}
+.pitem.clickable{cursor:pointer}
+.pitem{outline:2px solid transparent;outline-offset:1px;transition:outline-color .3s}
+.pitem.sel{outline-color:var(--select);transition:none}
+.pitem.gold{outline-color:var(--select)}
+.ptext{position:absolute;transform:translate(-50%,-50%);color:#fff;font-size:13px;white-space:nowrap;text-shadow:0 1px 0 #000}
+.flashc{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,#fff 0,#fff 30%,rgba(255,255,255,0) 60%);opacity:0;pointer-events:none}
+
+/* 공통 버튼 / 상자 */
+.btn{background:transparent;color:#fff;border:2px solid #fff;padding:7px 16px;font-size:14px;cursor:pointer;
+  min-height:var(--btn-min);min-width:var(--btn-min)}
+.btn:hover{background:rgba(255,255,255,.12)}
+.box{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--popup-bg);padding:22px 28px;width:max-content;max-width:min(540px,88vw);
+  text-align:center;font-size:16px;line-height:1.65;z-index:70;opacity:0;white-space:pre-line}
+.box .btns{display:flex;justify-content:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.box.inpop{position:absolute;z-index:4}
+.box input{display:block;margin:14px auto 0;width:min(320px,70vw);background:#000;border:2px solid #fff;color:#fff;font-family:var(--font);
+  font-size:18px;padding:8px 10px;text-align:center;letter-spacing:2px;user-select:text;-webkit-user-select:text}
+#tut{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--popup-bg);padding:22px 30px;width:max-content;max-width:min(520px,86vw);
+  text-align:center;font-size:16px;line-height:1.65;z-index:70;display:none;opacity:0}
+#tut .btns{display:flex;justify-content:center;gap:12px;margin-top:16px}
+
+/* 화면 위 문구 */
+#msg{position:fixed;left:50%;top:calc(var(--inv-h) + 16px);transform:translateX(-50%);color:#fff;font-size:var(--msg-size);padding:6px 18px;
+  background:rgba(28,28,28,.72);box-shadow:0 0 12px 8px rgba(28,28,28,.72);border-radius:10px;z-index:60;pointer-events:none;opacity:0;
+  display:none;width:max-content;max-width:min(92vw,900px);text-align:center;line-height:1.45;word-break:keep-all}
+
+/* 설명창 */
+#desc{position:fixed;background:var(--desc-bg);padding:10px 14px;z-index:65;display:none;max-width:250px;color:#fff}
+#desc .dn{font-size:14px;font-weight:bold;margin-bottom:5px}
+#desc .dt{font-size:12px;line-height:1.55;white-space:pre-line}
+#desc .db{text-align:center;margin-top:9px}
+#desc .btn{font-size:13px;padding:5px 14px}
+
+/* 강조 */
+#hl{position:fixed;inset:0;pointer-events:none;z-index:55;display:none}
+#hl .hole{position:absolute;box-shadow:0 0 0 300vmax rgba(0,0,0,.6);outline:4px solid transparent;outline-offset:-4px;border-radius:3px}
+#hl .hole.blink{animation:hlb .75s linear 2}
+@keyframes hlb{0%,55%{outline-color:var(--select)}56%,100%{outline-color:transparent}}
+
+/* 영상 / 엔딩 */
+#cine{position:absolute;inset:0;background:#000;display:none;z-index:45;align-items:center;justify-content:center;flex-direction:column}
+#cine video{width:100%;height:100%;object-fit:contain;background:#000}
+.ph{color:#aaa;text-align:center;line-height:1.8;font-size:14px}
+.endt{font-size:22px;color:#fff;opacity:0;text-align:center;padding:0 16px}
+.endb{font-size:40px;color:#fff;opacity:0;margin-top:22px;letter-spacing:4px}
+
+#rotate{position:fixed;inset:0;background:#111;z-index:300;display:none;align-items:center;justify-content:center;text-align:center;
+  font-size:16px;line-height:1.8;padding:20px}
+@media (orientation:portrait){ body.mobile.ml #rotate{display:flex} }
+#restart{position:absolute;top:8px;right:8px;z-index:6;display:none;background:transparent;border:1px solid rgba(255,255,255,.25);
+  color:rgba(255,255,255,.45);font-size:11px;padding:4px 8px;cursor:pointer;min-width:var(--btn-min);min-height:var(--btn-min)}
+#restart:hover{color:#fff;border-color:#fff}
+.endr{margin-top:28px;opacity:0}
+
+/* 검사기 화면 */
+.screen{position:absolute;container-type:size;display:flex;flex-direction:column;color:#e9eef2;overflow:hidden}
+.scr-bar{height:9%;font-size:5.2cqh;display:flex;align-items:center;padding-left:2%;background:#1d2a38;color:#bcd}
+.chart{width:100%;flex:0 0 54%}
+.chart .t{font-size:3.1px;fill:#e9eef2;font-family:var(--font)}
+.chart .v{font-size:3.1px;fill:#fff;font-family:var(--font)}
+.plate-area{flex:1;display:flex;flex-direction:column;padding:1% 4% 2%}
+.plate{height:44%;background:#c9d0d6;border:2px solid #8d969e;border-radius:999px;display:grid;grid-template-columns:repeat(5,1fr);
+  align-items:center;justify-items:center;padding:0 3%}
+.well{height:78%;aspect-ratio:1;border-radius:50%;background:#7d868e;border:2px solid #4b5258;display:flex;align-items:center;
+  justify-content:center;cursor:pointer;font-size:5.5cqh;color:#203040;box-shadow:inset 0 0 0 3px rgba(255,255,255,.35)}
+.well span{width:72%;height:72%;border-radius:50%;background:#f3e1e6;display:flex;align-items:center;justify-content:center}
+.well.done{cursor:default;filter:brightness(.92)}
+.infos{flex:1;display:grid;grid-template-columns:repeat(5,1fr);padding:0 3%}
+.info{display:flex;flex-direction:column;align-items:center;gap:4%;padding-top:2%}
+.idesc{font-size:4.2cqh;text-align:center;opacity:0;line-height:1.3}
+.isel{font-size:4.4cqh;padding:1.5% 6%;border-width:1px;opacity:0;display:none;min-height:0;min-width:0}
+
+#dbg{position:fixed;left:8px;bottom:8px;z-index:400;background:rgba(10,10,10,.94);border:1px solid #666;padding:10px;width:290px;
+  max-height:80vh;overflow:auto;font-size:12px;display:none}
+#dbg button{background:#222;color:#ddd;border:1px solid #555;font-size:11px;padding:3px 6px;margin:2px;cursor:pointer}
+#dbg select{background:#222;color:#ddd;border:1px solid #555;font-size:11px}
+#dbg .h{color:#ffd400;margin:6px 0 3px}
+</style>
+</head>
+<body>
+<div id="inv"></div>
+<div id="world">
+  <canvas id="map"></canvas>
+  <div id="labels"></div>
+  <div id="hint">스페이스 바를 눌러 상호작용</div>
+  <div id="pad">
+    <span></span><button data-d="up">▲</button><span></span>
+    <button data-d="left">◀</button><span></span><button data-d="right">▶</button>
+    <span></span><button data-d="down">▼</button><span></span>
+  </div>
+  <button id="act">상호작용</button>
+  <div id="popup">
+    <button id="pclose" aria-label="닫기">✕</button>
+    <div class="pp-stage" id="stage"></div>
+    <div class="pp-actions" id="acts"></div>
+  </div>
+  <div id="cine"></div>
+  <button id="restart">↺ 처음부터</button>
+</div>
+<div id="msg"><span id="msgT"></span></div>
+<div id="desc"></div>
+<div id="hl"><div class="hole"></div></div>
+<div id="tut"><div class="tx"></div><div class="btns"></div></div>
+<div id="rotate">화면을 가로로 돌려 주세요.<br>(가로 모드에 최적화되어 있습니다)</div>
+<div id="dbg"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   설정 블록 — 교체·수정은 주로 이 부분만 하면 됩니다.
+   ===================================================================== */
+// 기능 스위치 (되돌리기 명령: "4번 보완 취소" → save:false / "9번 항목 되돌려줘" → a11y:false)
+const FEATURES = { closeButton:true, save:true, mobileLayout:true, sfx:true, debug:true, a11y:true };
+
+// 엔딩 영상 경로 (index.html과 같은 폴더의 video/ 폴더)
+const VIDEO = { ending1:'video/ending1.mp4', ending2:'video/ending2.mp4', placeholderSec:33 };
+
+// 쥐별 치료제 항체 가변부위 유전자 서열
+const SEQ = { A:'ATGCATGGATAA', B:'ATGTGCAACTAG' };
+
+// 항원-항체 반응 검사 결과 [좀비 바이러스 결합도, 정상 세포 결합도]
+const TEST_DATA = { A:[42,20], B:[76,28], C:[91,5], D:[65,17], E:[95,63] };
+const ANSWER = 'C';
+
+// 효과음: {type, f:[주파수...], d:음 하나 길이(초), v:볼륨} 또는 'sfx/파일.mp3' 처럼 파일 경로
+const SFX = {
+  click:{type:'square',f:[660],d:.04,v:.08},
+  get:{type:'square',f:[523,784],d:.07,v:.1},
+  place:{type:'square',f:[784,523],d:.07,v:.1},
+  error:{type:'sawtooth',f:[196,147],d:.1,v:.08},
+  open:{type:'triangle',f:[330,660],d:.08,v:.16},
+  close:{type:'triangle',f:[660,330],d:.08,v:.16},
+  done:{type:'square',f:[523,659,784,1047],d:.08,v:.09},
+  tick:{type:'square',f:[988],d:.03,v:.07},
+  flash:{type:'noise',d:.45,v:.18},
+  end:{type:'triangle',f:[392,523,659,784,1047],d:.2,v:.15},
+};
+
+// 아이템 이름·설명 (임시 문구 — 확정 문구를 받으면 교체)
+const ITEMS = {
+  epithelial:{name:'정상적인 사람 구강 상피세포', desc:'사람의 입안 점막에서 얻은 정상 세포.\n항체가 정상 세포에 잘못 결합하지 않는지 확인하는 대조군으로 쓰인다.'},
+  cancer:{name:'암세포', desc:'끝없이 분열하는 생쥐의 골수종(암)세포.\nB림프구와 융합하면 잡종세포가 계속 증식할 수 있게 된다.'},
+  medium:{name:'잡종세포 배지', desc:'HAT 배지. 융합되지 않은 세포는 살아남지 못하고\n잡종세포만 선택적으로 자랄 수 있다.'},
+  ratA:{name:'실험용 쥐 A', desc:'좀비 바이러스에 감염된 실험용 쥐.\n바이러스에 대한 항체를 만드는 B림프구를 가지고 있다.'},
+  ratB:{name:'실험용 쥐 B', desc:'좀비 바이러스에 감염된 실험용 쥐.\n바이러스에 대한 항체를 만드는 B림프구를 가지고 있다.'},
+  bcell:{name:'B림프구', desc:'감염된 쥐의 비장에서 추출한 B림프구 클론들.\n항체를 만들지만 몸 밖에서는 오래 증식하지 못한다.'},
+  virus:{name:'좀비 바이러스 조각', desc:'비활성화 처리한 좀비 바이러스의 표면 단백질 조각.\n항원-항체 반응 검사에서 항원으로 쓰인다.'},
+  hybrid:{name:'잡종세포', desc:'B림프구와 암세포가 융합된 세포.\n항체를 만들면서 계속 분열할 수 있다.'},
+  hybridMedium:{name:'잡종세포가 들어있는 배지', desc:'잡종세포를 옮겨 담은 HAT 배지.\n세포 배양기에서 키워야 한다.'},
+  hybridCultured:{name:'배양된 잡종세포', desc:'HAT 배지에서 살아남아 증식한 잡종세포 집단.\n서로 다른 항체를 만드는 세포들이 섞여 있다.'},
+  cloneA:{name:'클론 A', desc:'하나의 잡종세포에서 증식한 세포 집단 A.\n한 종류의 항체(단클론항체)만 만든다.'},
+  cloneB:{name:'클론 B', desc:'하나의 잡종세포에서 증식한 세포 집단 B.\n한 종류의 항체(단클론항체)만 만든다.'},
+  cloneC:{name:'클론 C', desc:'하나의 잡종세포에서 증식한 세포 집단 C.\n한 종류의 항체(단클론항체)만 만든다.'},
+  cloneD:{name:'클론 D', desc:'하나의 잡종세포에서 증식한 세포 집단 D.\n한 종류의 항체(단클론항체)만 만든다.'},
+  cloneE:{name:'클론 E', desc:'하나의 잡종세포에서 증식한 세포 집단 E.\n한 종류의 항체(단클론항체)만 만든다.'},
+  cloneCCultured:{name:'배양된 클론 C', desc:'대량으로 배양한 클론 C.\n치료제를 만들 만큼 단클론항체를 얻을 수 있다.'},
+  treatY:{name:'좀비 바이러스 치료제', desc:''},
+  edited:{name:'유전자가 편집된 클론', desc:'항체 가변부위 DNA를 새로운 염기서열로 바꾼 클론.'},
+  treatZ:{name:'1회용 좀비 바이러스 치료제', desc:'유전자가 편집된 클론에서 얻은 항체로 만든 1회용 치료제.'},
+};
+const DONE_TXT='이곳에서 해야 할 작업을 마쳤습니다.', NOTYET_TXT='아직 상호작용할 수 없습니다.';
+
+/* ===================================================================== */
+const $=s=>document.querySelector(s);
+let SPEED=1;
+const wait=ms=>new Promise(r=>setTimeout(r,ms/SPEED));
+const IS_MOBILE=(()=>{const m=new URLSearchParams(location.search).get('mode');
+  if(m==='mobile')return true; if(m==='desktop')return false;
+  return matchMedia('(pointer:coarse)').matches && Math.min(screen.width,screen.height)<900;})();
+document.body.classList.toggle('mobile',IS_MOBILE);
+document.body.classList.toggle('ml',FEATURES.mobileLayout);
+document.body.classList.toggle('a11y',FEATURES.a11y);
+const LETTERS=['A','B','C','D','E'];
+const other=l=>l==='A'?'B':'A';
+
+function fade(el,to,ms=300){
+  if(!el) return Promise.resolve();
+  const from=getComputedStyle(el).opacity;
+  const a=el.animate([{opacity:from},{opacity:to}],{duration:Math.max(1,ms/SPEED),easing:'ease',fill:'forwards'});
+  return a.finished.then(()=>{el.style.opacity=to;a.cancel();}).catch(()=>{});
+}
+function moveTo(el,x,y,ms){
+  const a=el.animate([{left:el.style.left,top:el.style.top},{left:x+'%',top:y+'%'}],{duration:Math.max(1,ms/SPEED),easing:'ease-in-out',fill:'forwards'});
+  return a.finished.then(()=>{el.style.left=x+'%';el.style.top=y+'%';a.cancel();}).catch(()=>{});
+}
+
+/* ---------------- 효과음 ---------------- */
+let AC=null;
+function sfx(n){
+  if(!FEATURES.sfx) return; const d=SFX[n]; if(!d) return;
+  if(typeof d==='string'){ try{ new Audio(d).play().catch(()=>{}); }catch(e){} return; }
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    const t0=AC.currentTime+.01;
+    if(d.type==='noise'){
+      const len=Math.floor(AC.sampleRate*d.d), buf=AC.createBuffer(1,len,AC.sampleRate), ch=buf.getChannelData(0);
+      for(let i=0;i<len;i++) ch[i]=(Math.random()*2-1)*(1-i/len);
+      const src=AC.createBufferSource(), g=AC.createGain(); src.buffer=buf; g.gain.value=d.v; src.connect(g).connect(AC.destination); src.start(t0);
+      return;
+    }
+    d.f.forEach((f,i)=>{ const o=AC.createOscillator(), g=AC.createGain(), st=t0+i*d.d;
+      o.type=d.type; o.frequency.value=f; g.gain.setValueAtTime(d.v,st); g.gain.exponentialRampToValueAtTime(.0001,st+d.d);
+      o.connect(g).connect(AC.destination); o.start(st); o.stop(st+d.d+.03); });
+  }catch(e){}
+}
+
+/* ---------------- 상태 ---------------- */
+function freshState(){ return {
+  v:1, phase:'tutorial', skipped:false, inv:Array(8).fill(null), rat:null, editLetter:null,
+  stock:['epithelial','cancer','medium'], flags:{}, quest:null, muted:false, player:null,
+  pop:{ table:{stage:'idle',placed:{}}, incubator:{stage:'idle'}, fusion:{stage:'idle',placed:{}}, microscope:{stage:'idle',n:0},
+        tester:{stage:'idle',placed:{},ant:{},checked:[],left:['A','B','D','E']}, producer:{stage:'idle'}, editor:{stage:'idle'} }
+};}
+let S=freshState();
+const SAVE_KEY='sciLabMeta.v1';
+let NOSAVE=false; // 처음부터 다시 시 새로고침 직전 재저장 방지
+function canSave(){ return FEATURES.save && !NOSAVE && S.phase!=='tutorial' && !busyN && !popupAnim; }
+function save(){ if(!canSave()) return; try{ S.player={x:PL.x,y:PL.y,dir:PL.dir}; localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){} }
+function loadSave(){ if(!FEATURES.save) return null; try{ const d=JSON.parse(localStorage.getItem(SAVE_KEY)); if(d&&d.v===1) return d; }catch(e){} return null; }
+function clearSave(){ NOSAVE=true; try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+
+/* ---------------- 픽셀 그리기 도구 ---------------- */
+function R(c,x,y,w,h,col){ c.fillStyle=col; c.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
+function box(c,x,y,w,h,fill,light,dark,line='#121416'){ R(c,x,y,w,h,line); R(c,x+1,y+1,w-2,h-2,fill); if(light)R(c,x+1,y+1,w-2,1,light); if(dark)R(c,x+1,y+h-2,w-2,1,dark); }
+function disc(c,cx,cy,r,col){ c.fillStyle=col; const x0=Math.floor(cx-r-1),x1=Math.ceil(cx+r+1),y0=Math.floor(cy-r-1),y1=Math.ceil(cy+r+1);
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const dx=x+.5-cx,dy=y+.5-cy; if(dx*dx+dy*dy<=r*r) c.fillRect(x,y,1,1);} }
+function spr(c,rows,pal,ox=0,oy=0){ rows.forEach((row,y)=>{ for(let x=0;x<row.length;x++){ const p=pal[row[x]]; if(p) R(c,ox+x,oy+y,1,1,p);} }); }
+const F3={A:['010','101','111','101','101'],B:['110','101','110','101','110'],C:['011','100','100','100','011'],D:['110','101','101','101','110'],
+  E:['111','100','110','100','111'],'?':['111','001','010','000','010']};
+function letter(c,ch,x,y,col){ (F3[ch]||F3['?']).forEach((r,j)=>{ for(let i=0;i<3;i++) if(r[i]==='1') R(c,x+i,y+j,1,1,col); }); }
+function badge(c,ch){ if(!ch) return; R(c,0,0,5,7,'#111'); letter(c,ch,1,1,'#fff'); }
+const ABCOL={A:'#e05a5a',B:'#e0a040',C:'#4aa8e0',D:'#5cbf5c',E:'#b072e0'};
+const ABPAT={A:['101','010','010'],B:['101','101','010'],C:['111','010','010'],D:['111','101','010'],E:['010','111','010']};
+function pat(c,p,x,y,col,rot){ for(let j=0;j<3;j++)for(let i=0;i<3;i++){ let a=i,b=j; for(let r=0;r<rot;r++){ const t=a; a=b; b=2-t; } if(p[b][a]==='1') R(c,x+i,y+j,1,1,col); } }
+function cellAb(c,cx,cy,r,body,nuc,L){
+  disc(c,cx,cy,r+.8,'#5a3a66'); disc(c,cx,cy,r,body); disc(c,cx-.6,cy-.4,r*.42,nuc);
+  if(L){ const col=ABCOL[L],p=ABPAT[L], fx=Math.floor(cx), fy=Math.floor(cy), rr=Math.round(r);
+    pat(c,p,fx-1,fy-rr-3,col,0); pat(c,p,fx+rr+1,fy-1,col,1); pat(c,p,fx-1,fy+rr+1,col,2); pat(c,p,fx-rr-3,fy-1,col,3); }
+}
+function dish(c,fill){ disc(c,8,8,7.4,'#3a4046'); disc(c,8,8,6.5,'#d4dde2'); disc(c,8,8,5.6,fill); R(c,4,4,2,1,'rgba(255,255,255,.75)'); }
+function flask(c,fill){ R(c,1,5,12,9,'#3a4046'); R(c,2,6,10,7,'#dfeef4'); R(c,12,7,3,4,'#3a4046'); R(c,13,8,2,2,'#dfeef4'); R(c,15,6,1,6,'#2b6cb0');
+  R(c,2,9,10,4,fill); R(c,3,6,4,1,'rgba(255,255,255,.8)'); }
+
+/* ---------------- 아이콘 (16×16 도트) ---------------- */
+const RAT=['................','................','................','................','........kk......','.......kppk.....',
+  '....kkkkwwkkk...','...kwwwwwwwwwk..','..kwwwwwwwwwwrk.','..kwwwwwwwwwwwwk','..kwwwwwwwwwwkk.','.pkkwkkkkwkk....','pp..............',
+  '................','................','................'];
+function drawIcon(c,id,L){
+  switch(id){
+  case 'epithelial': dish(c,'#eef1f2');
+    R(c,3,5,5,4,'#c98a80');R(c,4,6,3,2,'#f2bdb2'); R(c,8,4,5,4,'#c98a80');R(c,9,5,3,2,'#efb3a8'); R(c,5,9,6,4,'#c98a80');R(c,6,10,4,2,'#f2bdb2');
+    R(c,5,6,1,1,'#9c4b5e');R(c,10,5,1,1,'#9c4b5e');R(c,7,10,1,1,'#9c4b5e'); break;
+  case 'cancer': dish(c,'#efe9f2'); disc(c,6,7,2.4,'#7d4aa0'); disc(c,10,9,2.6,'#8e5bb0'); disc(c,7,11,1.8,'#9a68bb'); disc(c,11,5.5,1.4,'#8e5bb0');
+    R(c,6,7,1,1,'#3e2050');R(c,10,9,1,1,'#3e2050');R(c,7,11,1,1,'#3e2050'); break;
+  case 'medium': dish(c,'#e47f86'); R(c,5,6,3,1,'rgba(255,255,255,.35)'); break;
+  case 'hybridMedium': dish(c,'#e47f86'); [[6,7],[9,9],[7,11],[10,5],[11,10]].forEach(([x,y])=>{R(c,x,y,2,2,'#7a3f8e');R(c,x,y,1,1,'#d8a6e2');}); break;
+  case 'hybrid': dish(c,'#eef1f2'); disc(c,8,8,4.4,'#5a3a66'); disc(c,8,8,3.7,'#c58bd6'); R(c,6,7,2,2,'#6d3a85'); R(c,9,8,2,2,'#6d3a85'); break;
+  case 'hybridCultured': flask(c,'#e47f86'); [[3,10],[5,11],[7,10],[9,11],[4,12],[8,12],[10,10]].forEach(([x,y])=>R(c,x,y,1,1,'#7a3f8e')); break;
+  case 'bcell': R(c,5,1,7,3,'#1d3e70');R(c,6,2,5,1,'#3b6fb6'); R(c,5,4,7,8,'#3a4046');R(c,6,4,5,7,'#e8f1f5'); R(c,6,11,5,2,'#3a4046');R(c,7,11,3,1,'#e8f1f5');
+    R(c,7,13,3,2,'#3a4046'); R(c,6,7,5,4,'#8fbbee'); R(c,7,8,1,1,'#2a5aa8');R(c,9,9,1,1,'#2a5aa8');R(c,8,10,1,1,'#2a5aa8'); break;
+  case 'virus': [[7,1],[7,13],[1,7],[13,7],[3,3],[11,3],[3,11],[11,11]].forEach(([x,y])=>{R(c,x,y,2,2,'#2e6e28');});
+    disc(c,8,8,5,'#2e6e28'); disc(c,8,8,4.2,'#6cc05a'); R(c,6,6,2,1,'#2e6e28');R(c,9,9,2,1,'#2e6e28');R(c,6,10,1,1,'#2e6e28'); R(c,6,5,2,1,'#b6f0a0'); break;
+  case 'ratA': case 'ratB': spr(c,RAT,{k:'#7a7a7a',w:'#f7f7f7',p:'#e9a3b0',r:'#d23a3a'},0,1); badge(c,id.slice(-1)); break;
+  case 'cloneA':case 'cloneB':case 'cloneC':case 'cloneD':case 'cloneE': dish(c,'#f1ecef'); cellAb(c,8,8.5,2.6,'#d8a6e2','#7b4290',id.slice(-1)); badge(c,id.slice(-1)); break;
+  case 'cloneCCultured': flask(c,'#e47f86'); [[3,10],[5,11],[7,10],[9,11],[10,10]].forEach(([x,y])=>{R(c,x,y,1,1,'#7a3f8e');R(c,x+1,y-1,1,1,ABCOL.C);}); badge(c,'C'); break;
+  case 'edited': dish(c,'#f1ecef'); cellAb(c,7,9,2.6,'#d8a6e2','#7b4290',null);
+    for(let y=3;y<14;y++){ const s=Math.round(Math.sin(y/1.6)*1.5); R(c,12+s,y,1,1,'#4fe0c0'); R(c,12-s,y,1,1,'#e07ad0'); } badge(c,L); break;
+  case 'treatY': R(c,5,1,6,3,'#7d1f1f');R(c,6,1,4,2,'#c33'); R(c,6,4,4,1,'#3a4046'); R(c,4,5,8,10,'#3a4046');R(c,5,6,6,8,'#e8f1f5');
+    R(c,5,8,6,6,'#4aa8e0'); R(c,5,10,6,2,'#ffffff'); R(c,6,6,1,2,'rgba(255,255,255,.9)'); badge(c,L); break;
+  case 'treatZ': R(c,6,2,4,2,'#555'); R(c,7,4,2,2,'#3a4046'); R(c,5,6,6,8,'#3a4046');R(c,6,7,4,6,'#e8f1f5'); R(c,6,9,4,4,'#f0a040'); R(c,6,8,4,1,'#c33'); badge(c,L); break;
+  case 'emptyDish': dish(c,'#e9eef0'); break;
+  case 'syringe': R(c,5,6,9,5,'#3a4046'); R(c,6,7,7,3,'#dfeff6'); R(c,6,8,3,1,'#c58bd6'); R(c,14,8,1,1,'#3a4046'); R(c,15,6,1,5,'#3a4046');
+    R(c,4,7,1,3,'#3a4046'); R(c,0,8,4,1,'#9aa3ab'); R(c,7,6,1,1,'#3a4046');R(c,9,6,1,1,'#3a4046');R(c,11,6,1,1,'#3a4046'); break;
+  case 'dropper': case 'dropperFull': R(c,6,0,4,5,'#7d1f1f'); R(c,7,1,2,3,'#c33'); R(c,6,5,4,9,'#3a4046'); R(c,7,5,2,9,'#dfeef4');
+    R(c,7,14,2,2,'#3a4046'); if(id==='dropperFull') R(c,7,8,2,6,'#c58bd6'); break;
+  case 'cellCancer': disc(c,8,8,5.5,'#4b2a63'); disc(c,8,8,4.8,'#8e5bb0'); disc(c,7,7,2,'#3e2050'); break;
+  case 'cellB': disc(c,8,8,4.8,'#1e3e70'); disc(c,8,8,4.1,'#6d9fe0'); disc(c,8,8,2.6,'#284f8f'); break;
+  case 'cellHybrid': disc(c,8,8,6.4,'#5a3a66'); disc(c,8,8,5.7,'#b98ad6'); disc(c,6.5,8,2,'#4b2a63'); disc(c,9.8,8,2,'#284f8f'); break;
+  case 'baejab': [[5,6,3],[10,5,3],[8,10,3.2],[12,10,2.6],[4,11,2.4]].forEach(([x,y,r],i)=>{ disc(c,x,y,r+.7,'#5a3a66'); disc(c,x,y,r,i%2?'#c896d6':'#d8a6e2'); R(c,x-1,y-1,1,1,'#7b4290'); });
+    [[2,4,'A'],[13,3,'B'],[15,9,'C'],[8,14,'D'],[1,13,'E']].forEach(([x,y,l])=>R(c,x,y,1,1,ABCOL[l])); break;
+  default:
+    if(/^jab[1-5]$/.test(id)){ cellAb(c,8,8,3.2,'#d8a6e2','#7b4290',LETTERS[+id[3]-1]); }
+  }
+}
+const ICACHE={};
+function iconLetter(id){ return id==='treatY'?S.rat:id==='treatZ'?(S.rat?other(S.rat):null):id==='edited'?S.editLetter:null; }
+function iconURL(id){ const L=iconLetter(id)||''; const k=id+'|'+L; if(ICACHE[k]) return ICACHE[k];
+  const cv=document.createElement('canvas'); cv.width=cv.height=16; drawIcon(cv.getContext('2d'),id,L); return ICACHE[k]=cv.toDataURL(); }
+function itemName(id){ if(id==='treatY') return '좀비 바이러스 치료제 '+(S.rat||'');
+  if(id==='treatZ') return '1회용 좀비 바이러스 치료제 '+(S.rat?other(S.rat):'');
+  if(id==='edited') return '유전자가 편집된 클론 '+(S.editLetter||''); return (ITEMS[id]||{}).name||id; }
+function itemDesc(id){ if(id==='treatY') return '클론 C가 만든 단클론항체로 만든 치료제.\n항체 가변부위를 암호화하는 유전자의 염기 서열:\n'+(SEQ[S.rat]||'');
+  if(id==='edited') return '항체 가변부위 DNA를 새로운 염기서열로 바꾼 클론 '+(S.editLetter||'')+'.'; return (ITEMS[id]||{}).desc||''; }
+
+/* ---------------- 팝업 일러스트 (200×125 도트) ---------------- */
+const MC={o:'#121416',m0:'#5f676f',m1:'#8d969e',m2:'#b8c0c7',m3:'#d3d9de',w:'#eef1f3',dk:'#22272c',gl:'#9cc9da',glD:'#5d8fa3'};
+function persp(c,x0,x1,yTop0,yBot0,shrink,col){ for(let x=x0;x<=x1;x++){ const t=(x-x0)*shrink; R(c,x,yTop0+t,1,(yBot0-yTop0)-2*t,col);} }
+const ILL={
+  cage(c){ box(c,26,78,148,28,'#7b8794','#93a0ad','#5d6874'); R(c,30,22,140,58,'#30353b'); R(c,30,72,140,10,'#d8c49a');
+    for(let x=32;x<168;x+=5) R(c,x,74+(x%3),2,1,'#c5ad7f');
+    for(let x=31;x<170;x+=7) R(c,x,26,2,48,'#aab3ba'); box(c,28,20,144,7,'#c9d0d6','#e1e6ea','#9aa3ab'); R(c,28,26,3,50,'#c9d0d6');R(c,169,26,3,50,'#c9d0d6');
+    box(c,42,27,34,10,'#8a929a'); box(c,148,30,12,28,MC.gl,'#cfe7ef',MC.glD); R(c,153,58,2,10,'#777'); },
+  table(c){ for(let y=40;y<=96;y++){ const t=(y-40)/56; const x0=20-16*t, x1=180+16*t; R(c,x0,y,x1-x0,1,y===40?'#5b636b':'#3a4046'); }
+    R(c,4,96,192,8,'#262a2e'); R(c,10,104,8,20,'#555c62'); R(c,182,104,8,20,'#555c62'); R(c,14,114,172,4,'#444a50');
+    box(c,26,30,32,12,'#9aa3ab','#b8c0c7'); ['#e06666','#66aaee','#66dd66','#eecc66'].forEach((col,i)=>{R(c,30+i*7,20,4,16,'#3a4046');R(c,31+i*7,21,2,8,'#e8f1f5');R(c,31+i*7,29,2,6,col);});
+    box(c,150,44,26,15,'#e8e4d4'); for(let i=0;i<3;i++) R(c,154,48+i*3,18,1,'#aaa48f'); },
+  incOpen(c){ box(c,40,4,120,118,'#c9d0d6','#e2e7ea','#8e979f'); box(c,50,22,100,92,'#2b3035'); R(c,52,58,96,3,'#9aa3ab'); R(c,52,98,96,3,'#9aa3ab');
+    for(let x=55;x<146;x+=6){R(c,x,59,2,1,'#5f676f');R(c,x,99,2,1,'#5f676f');}
+    box(c,58,8,46,11,'#16221a'); [62,70,78,90].forEach(x=>R(c,x,11,5,5,'#62e07a')); R(c,86,15,2,2,'#62e07a'); R(c,140,11,4,4,'#d94a4a');
+    persp(c,160,178,6,120,.55,'#b5bdc4'); persp(c,163,175,30,90,.55,'#8e979f'); },
+  incClosed(c){ box(c,40,4,120,118,'#c9d0d6','#e2e7ea','#8e979f'); box(c,50,22,100,92,'#b9c1c8','#d6dbdf','#8e979f');
+    box(c,70,36,60,36,'#2b3035'); R(c,74,40,20,2,'rgba(255,255,255,.25)'); box(c,136,52,6,30,'#6b737b');
+    box(c,58,8,46,11,'#16221a'); [62,70,78,90].forEach(x=>R(c,x,11,5,5,'#62e07a')); R(c,86,15,2,2,'#62e07a'); R(c,140,11,4,4,'#62e07a'); },
+  hazard(c){ persp(c,34,60,10,118,-.0,'#5e675e'); for(let x=34;x<60;x++){ const t=(60-x)*.45; R(c,x,4+t,1,116-2*t,'#7f8a80'); }
+    for(let i=0;i<9;i++) R(c,47-i,36+i,1+2*i,1,'#f2c230'); R(c,46,39,2,4,'#111'); R(c,46,44,2,1,'#111');
+    box(c,60,4,80,116,'#7f8a80','#98a398','#5e675e'); box(c,66,10,68,104,'#24282b'); R(c,67,70,66,3,'#6b736b'); R(c,67,73,66,1,'#3d433d');
+    for(let x=60;x<140;x+=8){R(c,x,114,4,7,'#f2c230');R(c,x+4,114,4,7,'#222');} },
+  fusion(c){ box(c,40,100,120,16,'#8d969e','#aab3ba','#6b737b'); box(c,92,20,16,80,'#b8c0c7','#d0d6db','#8d969e');
+    box(c,95,6,10,16,'#4a5056'); box(c,93,2,14,6,'#2b2f33'); box(c,95,58,10,12,'#5a6066'); box(c,66,78,68,6,'#4a5056');
+    box(c,86,72,28,7,MC.gl,'#d6eef5',MC.glD);
+    box(c,14,12,30,24,'#8d969e','#aab3ba','#6b737b'); box(c,156,12,30,24,'#8d969e','#aab3ba','#6b737b');
+    for(let i=0;i<40;i++){ const col=i>34?'#4a5056':'#c9d0d6'; R(c,40+i,32+i,5,5,'#121416'); R(c,41+i,33+i,3,3,col);
+      R(c,155-i,32+i,5,5,'#121416'); R(c,156-i,33+i,3,3,col); } },
+  eye(c){ R(c,0,0,200,125,'#050505'); disc(c,100,62.5,58,'#2c3236'); disc(c,100,62.5,55,'#bfc9ce'); disc(c,100,62.5,50,'#dfe7ea');
+    R(c,100,12,1,101,'rgba(0,0,0,.08)'); R(c,48,62,104,1,'rgba(0,0,0,.08)'); },
+  micro(c){ box(c,62,108,76,13,'#c9d0d6','#e2e7ea','#8e979f'); box(c,118,30,14,80,'#c9d0d6','#e2e7ea','#8e979f'); box(c,100,20,34,14,'#c9d0d6','#e2e7ea');
+    box(c,92,6,16,26,'#b8c0c7','#d0d6db'); box(c,94,0,12,8,'#3a3f44'); box(c,90,38,26,9,'#5a6066'); box(c,94,46,7,11,'#3a3f44'); box(c,104,46,6,9,'#3a3f44');
+    box(c,62,66,82,6,'#3a3f44'); R(c,70,63,12,3,'#8d969e'); R(c,124,63,12,3,'#8d969e'); box(c,92,84,22,6,'#8d969e'); R(c,98,80,10,4,'#f2e6a0');
+    disc(c,140,92,6,'#121416'); disc(c,140,92,5,'#5a6066'); },
+  ext(c,closed){ box(c,50,2,100,121,'#9aa3ab','#b8c0c7','#6b737b'); box(c,150,10,26,105,'#7d868e','#9aa3ab');
+    for(let i=0;i<5;i++){ R(c,157,18+i*20,6,6,'#121416'); R(c,158,19+i*20,4,4,closed?'#62e07a':'#d9a640'); R(c,166,20+i*20,6,2,'#5f676f');
+      const y=6+i*23; if(!closed){ box(c,56,y,88,21,'#22272c'); for(let k=0;k<4;k++){ R(c,58+k*5,y+1,1,19,'#6b737b'); R(c,141-k*5,y+1,1,19,'#6b737b'); } R(c,57,y+18,86,2,'#4a5056'); }
+      else { box(c,56,y,88,21,'#8d969e','#aab3ba','#6b737b'); R(c,57,y+6,86,1,'#6b737b'); R(c,57,y+11,86,1,'#6b737b'); R(c,57,y+16,86,1,'#6b737b'); box(c,95,y+6,10,8,'#22272c'); }
+      R(c,52,y+9,3,3,'#5f676f'); R(c,145,y+9,3,3,'#5f676f'); } },
+  ant(c,closed){ box(c,24,22,152,92,'#9aa3ab','#b8c0c7','#6b737b'); R(c,44,26,42,10,'#d8dee3'); R(c,114,26,42,10,'#d8dee3');
+    [34,104].forEach(x=>{ if(!closed){ box(c,x,40,62,62,'#22272c'); R(c,x+4,90,54,4,'#6b737b'); }
+      else { box(c,x,40,62,62,'#8d969e','#aab3ba','#6b737b'); for(let k=1;k<6;k++) R(c,x+1,40+k*10,60,1,'#6b737b'); box(c,x+24,58,14,10,'#22272c'); R(c,x+54,64,4,10,'#5f676f'); } });
+    R(c,30,106,140,4,'#6b737b'); [40,52,64].forEach((x,i)=>R(c,x,107,6,2,['#d94a4a','#62e07a','#f2c230'][i])); },
+  mon(c){ box(c,22,4,156,90,'#2a2d30','#3a3e42','#1a1c1e'); R(c,26,8,148,82,'#0f1720'); box(c,92,93,16,14,'#3a3e42'); box(c,66,106,68,8,'#3a3e42','#4a4f54'); R(c,168,90,4,2,'#4fd06b'); },
+  prod(c){ box(c,46,6,108,114,'#c9d0d6','#e2e7ea','#8e979f'); box(c,62,12,76,16,'#102018'); for(let i=0;i<8;i++) R(c,66+i*8,16+(i%3)*2,5,8-(i%3)*2,'#4fd06b');
+    box(c,72,36,56,50,'#20262b'); box(c,78,42,44,38,'#2b3640'); R(c,80,74,40,4,'#6b737b');
+    box(c,16,20,28,92,MC.glD); R(c,18,50,24,60,'#4b8fd6'); [[24,60],[34,72],[28,88]].forEach(([x,y])=>R(c,x,y,3,3,'#9fd0ff'));
+    box(c,156,20,28,92,MC.glD); R(c,158,64,24,46,'#6bb6e8'); R(c,166,80,3,3,'#cfe9ff');
+    R(c,44,30,4,6,'#6b737b'); R(c,152,30,4,6,'#6b737b'); R(c,70,94,10,6,'#d94a4a'); R(c,86,94,10,6,'#58b85a'); R(c,102,94,10,6,'#f2c230');
+    for(let i=0;i<6;i++) R(c,60,104+i*2,80,1,'#8e979f'); },
+  edit(c){ box(c,40,4,120,118,'#c9d0d6','#e2e7ea','#8e979f'); box(c,54,12,92,32,'#0f1c22');
+    for(let x=0;x<84;x+=1){ const a=Math.sin(x/7)*9; if(x%7===0) R(c,58+x,Math.min(28+a,28-a),1,Math.abs(2*a),'#3d5560'); R(c,58+x,27+a,2,2,'#4fe0c0'); R(c,58+x,27-a,2,2,'#e07ad0'); }
+    box(c,72,54,56,46,'#20262b'); box(c,78,60,44,34,'#2b3640'); R(c,97,46,6,12,'#6b737b'); R(c,95,56,10,3,'#8d969e');
+    R(c,60,106,10,6,'#d94a4a'); R(c,76,106,10,6,'#58b85a'); R(c,92,106,10,6,'#f2c230'); for(let i=0;i<4;i++) R(c,112,104+i*3,32,1,'#8e979f'); },
+};
+const ILLS={incOpen:'incOpen',incClosed:'incClosed'};
+
+/* ---------------- 맵 ---------------- */
+const TW=16, MW=24, MH=14;
+const OBJ_DRAW={
+  cage(c){ box(c,1,16,46,16,'#8a6544','#a98058','#634631'); R(c,23,18,1,12,'#634631'); R(c,19,22,2,2,'#c9a36a'); R(c,27,22,2,2,'#c9a36a');
+    box(c,4,3,40,14,'#30353b'); R(c,5,11,38,5,'#7b8794'); R(c,6,10,36,2,'#d8c49a'); for(let x=6;x<43;x+=3) R(c,x,4,1,7,'#aab3ba'); R(c,5,3,38,2,'#c9d0d6');
+    R(c,12,8,5,3,'#f7f7f7'); R(c,16,8,1,1,'#d23a3a'); R(c,28,8,5,3,'#f7f7f7'); R(c,32,8,1,1,'#d23a3a'); R(c,39,4,3,7,'#9cc9da'); },
+  incubator(c){ box(c,2,2,28,45,MC.m3,MC.w,MC.m1); R(c,4,4,24,6,MC.m1); R(c,6,5,10,4,'#16221a'); R(c,7,6,2,2,'#62e07a');R(c,10,6,2,2,'#62e07a');R(c,13,6,2,2,'#62e07a');
+    R(c,22,6,2,2,'#d94a4a'); box(c,4,12,24,32,MC.m2,MC.m3,MC.m1); box(c,7,15,14,16,'#2b3035'); R(c,8,16,12,1,'#7fa9b8'); R(c,8,22,12,1,MC.m1); R(c,8,27,12,1,MC.m1);
+    R(c,24,22,2,10,MC.m0); R(c,4,46,4,2,MC.o); R(c,24,46,4,2,MC.o); },
+  hazard(c){ box(c,3,2,26,45,'#7f8a80','#9aa59a','#5e675e'); for(let i=0;i<4;i++) R(c,7,6+i*2,18,1,'#5e675e');
+    for(let i=0;i<7;i++) R(c,16-i,16+i,1+2*i,1,'#f2c230'); R(c,15,18,2,3,'#111'); R(c,15,22,2,1,'#111');
+    for(let x=4;x<28;x+=4){ R(c,x,38,2,7,'#f2c230'); R(c,x+2,38,2,7,'#222'); } R(c,24,25,2,7,MC.m3); },
+  fusion(c){ box(c,2,30,28,16,MC.m1,MC.m2,MC.m0); R(c,4,46,3,2,'#111'); R(c,25,46,3,2,'#111'); box(c,8,24,16,7,MC.m2,MC.w);
+    R(c,14,8,4,16,MC.m0); R(c,13,4,6,5,'#333'); R(c,10,20,12,2,'#333'); R(c,13,18,6,2,MC.gl);
+    for(let i=0;i<9;i++){ R(c,4+i,9+i,2,2,MC.m3); R(c,26-i,9+i,2,2,MC.m3); } box(c,1,5,5,6,MC.m1); box(c,26,5,5,6,MC.m1); },
+  table(c){ box(c,3,19,58,12,MC.m3,MC.w,MC.m1); R(c,22,20,1,10,MC.m1); R(c,42,20,1,10,MC.m1); R(c,12,24,4,1,MC.m0); R(c,31,24,4,1,MC.m0); R(c,50,24,4,1,MC.m0);
+    box(c,1,6,62,14,'#2b2f33','#3c4248','#1f2326'); box(c,6,2,11,6,MC.m2); ['#e06666','#66aaee','#66dd66','#eecc66'].forEach((col,i)=>{R(c,7+i*2,0,1,5,col);});
+    R(c,46,3,6,6,MC.gl); R(c,48,0,2,3,MC.gl); R(c,47,6,4,2,'#c58bd6'); R(c,28,9,10,7,'#f0ede0'); R(c,30,11,6,1,'#aaa48f'); R(c,30,13,6,1,'#aaa48f'); },
+  microscope(c){ box(c,1,26,30,21,'#8a6544','#a98058','#634631'); R(c,1,26,30,3,'#2b2f33');
+    box(c,9,21,14,5,MC.w); box(c,18,8,5,15,MC.m3); box(c,11,4,8,5,MC.m3); R(c,13,0,3,5,'#333'); R(c,12,10,4,6,'#555'); R(c,8,16,14,2,'#333'); R(c,22,14,3,3,'#555'); },
+  editor(c){ box(c,2,6,28,41,MC.m3,MC.w,MC.m1); box(c,5,9,22,12,'#0f1c22');
+    for(let x=0;x<20;x++){ const y=Math.round(2.5*Math.sin(x/2)); R(c,6+x,14+y,1,1,'#4fe0c0'); R(c,6+x,14-y,1,1,'#e07ad0'); }
+    box(c,9,25,14,12,'#2c3238'); R(c,11,27,10,8,MC.glD); R(c,6,40,3,2,'#d94a4a'); R(c,11,40,3,2,'#58b85a'); R(c,16,40,3,2,'#f2c230'); },
+  tester(c){ box(c,1,26,30,21,MC.m2,MC.m3,MC.m1); R(c,4,30,24,1,MC.m1); box(c,5,6,22,15,'#222'); R(c,7,8,18,11,'#1d3550');
+    R(c,9,14,2,4,'#e04545'); R(c,11,16,2,2,'#4573e0'); R(c,15,11,2,7,'#e04545'); R(c,17,17,2,1,'#4573e0'); R(c,21,13,2,5,'#e04545'); R(c,23,15,2,3,'#4573e0');
+    R(c,15,21,2,4,'#333'); R(c,12,24,8,2,'#333'); R(c,8,27,12,2,'#555'); },
+  producer(c){ box(c,10,8,28,39,MC.m3,MC.w,MC.m1); box(c,1,12,9,30,MC.glD); R(c,2,22,7,19,'#4b8fd6'); box(c,38,12,9,30,MC.glD); R(c,39,26,7,15,'#6bb6e8');
+    R(c,9,16,2,2,MC.m0); R(c,37,16,2,2,MC.m0); box(c,16,20,16,14,'#20262b'); R(c,20,24,8,6,'#7fd0ff'); box(c,14,11,20,6,'#102018'); R(c,16,13,10,2,'#4fd06b');
+    R(c,12,46,4,2,MC.o); R(c,32,46,4,2,MC.o); },
+  shelf(c){ box(c,1,1,30,30,'#8a6544','#a98058','#634631'); R(c,2,11,28,1,'#634631'); R(c,2,21,28,1,'#634631');
+    [[4,5,3,6,'#7ab'],[8,6,3,5,'#d86'],[12,4,2,7,'#6c6'],[16,6,4,5,'#eee'],[22,5,3,6,'#a7d'],[4,15,4,6,'#ddd'],[10,16,3,5,'#e66'],[15,14,3,7,'#7ab'],[20,16,6,5,'#cb8'],
+     [4,25,6,5,'#bbb'],[12,24,3,6,'#6ae'],[18,25,8,5,'#998']].forEach(([x,y,w,h,col])=>R(c,x,y,w,h,col)); },
+  bench(c){ box(c,1,14,30,17,MC.m3,MC.w,MC.m1); R(c,1,12,30,4,'#2b2f33'); R(c,15,17,1,12,MC.m1); R(c,6,0+6,4,6,MC.gl); R(c,7,9,2,3,'#66dd66'); R(c,18,5,6,7,MC.gl); R(c,19,8,4,4,'#eecc66'); R(c,20,2,2,3,MC.gl); },
+  sink(c){ box(c,1,12,30,19,MC.m3,MC.w,MC.m1); R(c,1,12,30,3,'#2b2f33'); R(c,6,13,20,4,'#7d8b95'); R(c,15,4,2,9,MC.m1); R(c,15,4,6,2,MC.m1); R(c,10,20,12,8,MC.m2); },
+  plant(c){ box(c,3,20,10,11,'#b5653d','#cf7d52','#8c4a2a'); disc(c,8,14,5,'#2f7d3a'); disc(c,5,10,3.5,'#3b9a48'); disc(c,11,9,3.5,'#3b9a48'); disc(c,8,6,3,'#4cb35a'); },
+  locker(c){ box(c,1,2,30,45,'#6f7f92','#8595a8','#55637a'); R(c,15,3,2,43,'#55637a'); for(let i=0;i<3;i++){ R(c,4,8+i*2,9,1,'#55637a'); R(c,19,8+i*2,9,1,'#55637a'); }
+    R(c,11,24,2,5,MC.m3); R(c,19,24,2,5,MC.m3); },
+  stool(c){ disc(c,8,6,5,'#121416'); disc(c,8,6,4,'#5f676f'); R(c,5,9,1,6,'#333'); R(c,10,9,1,6,'#333'); },
+  trash(c){ box(c,3,3,10,12,'#5f676f','#8d969e'); R(c,2,2,12,2,'#3a4046'); R(c,6,6,1,7,'#4a5056'); R(c,9,6,1,7,'#4a5056'); },
+};
+// 상호작용 사물 (x,y,w,h = 타일 위치·크기 / top = 위로 더 그려지는 높이)
+const OBJECTS=[
+  {id:'cage',name:'실험용 쥐 사육장',x:2,y:2,w:3,h:2,top:0},
+  {id:'incubator',name:'세포 배양기',x:10,y:2,w:2,h:2,top:1},
+  {id:'hazard',name:'생물학적 위해물질 보관함',x:19,y:2,w:2,h:2,top:1},
+  {id:'fusion',name:'세포 융합기',x:2,y:6,w:2,h:2,top:1},
+  {id:'table',name:'실험 테이블',x:10,y:6,w:4,h:2,top:0},
+  {id:'microscope',name:'현미경',x:19,y:6,w:2,h:2,top:1},
+  {id:'editor',name:'유전자 편집기',x:2,y:10,w:2,h:2,top:1},
+  {id:'tester',name:'항원 - 항체 반응 검사기',x:8,y:10,w:2,h:2,top:1},
+  {id:'producer',name:'단클론항체 치료제 생산기',x:15,y:10,w:3,h:2,top:1},
+];
+// 장식 사물 (동선 구성용)
+const DECOR=[
+  {d:'shelf',x:6,y:2,w:2,h:1,top:1},{d:'shelf',x:14,y:2,w:2,h:1,top:1},{d:'plant',x:22,y:2,w:1,h:1,top:1},
+  {d:'bench',x:6,y:6,w:2,h:1,top:1},{d:'bench',x:15,y:6,w:2,h:1,top:1},{d:'trash',x:22,y:5,w:1,h:1,top:0},
+  {d:'sink',x:21,y:9,w:2,h:1,top:1},{d:'locker',x:20,y:10,w:2,h:2,top:1},{d:'plant',x:22,y:12,w:1,h:1,top:1},
+  {d:'stool',x:5,y:11,w:1,h:1,top:0},{d:'stool',x:6,y:8,w:1,h:1,top:0},
+];
+const SOLID=[...Array(MH)].map((_,y)=>[...Array(MW)].map((_,x)=>y<2||y===MH-1||x===0||x===MW-1));
+const SPRITES=[];
+function mkCanvas(w,h,fn){ const cv=document.createElement('canvas'); cv.width=w; cv.height=h; fn(cv.getContext('2d')); return cv; }
+[...OBJECTS.map(o=>({...o,d:o.id,obj:o})),...DECOR].forEach(o=>{
+  for(let y=o.y;y<o.y+o.h;y++)for(let x=o.x;x<o.x+o.w;x++) SOLID[y][x]=true;
+  SPRITES.push({cv:mkCanvas(o.w*TW,(o.h+o.top)*TW,c=>OBJ_DRAW[o.d](c)),x:o.x*TW,y:(o.y-o.top)*TW,base:(o.y+o.h)*TW});
+});
+const FLOOR=mkCanvas(MW*TW,MH*TW,c=>{
+  for(let y=2;y<MH-1;y++)for(let x=1;x<MW-1;x++){ R(c,x*TW,y*TW,TW,TW,(x+y)%2?'#c9ccce':'#d1d4d6'); R(c,x*TW,y*TW,TW,1,'#b9bcbe'); R(c,x*TW,y*TW,1,TW,'#b9bcbe'); }
+  R(c,0,0,MW*TW,32,'#7f8a94'); R(c,0,28,MW*TW,4,'#5b636b'); for(let x=0;x<MW*TW;x+=24) R(c,x,0,1,28,'#76818b');
+  [[2,3],[21,2]].forEach(([tx,n])=>{ box(c,tx*TW,4,n*TW,20,'#a9d0e8','#d6ecf7','#7fb2cf','#4b5560'); R(c,tx*TW+n*8,4,2,20,'#4b5560'); R(c,tx*TW,13,n*TW,2,'#4b5560'); });
+  box(c,13*TW-4,3,6*TW+8,22,'#2f5a46','#3d6e57','#264a39','#6b4a2f'); R(c,13*TW+8,9,20,1,'#d8e6dd'); R(c,13*TW+8,13,34,1,'#d8e6dd'); R(c,13*TW+50,16,22,1,'#d8e6dd');
+  R(c,0,0,TW,MH*TW,'#5b636b'); R(c,(MW-1)*TW,0,TW,MH*TW,'#5b636b'); R(c,0,(MH-1)*TW,MW*TW,TW,'#5b636b'); R(c,TW-2,32,2,(MH-3)*TW,'#4b5258'); R(c,(MW-1)*TW,32,2,(MH-3)*TW,'#4b5258');
+  R(c,11*TW,(MH-1)*TW,2*TW,TW,'#8a6544'); R(c,11*TW+2,(MH-1)*TW+2,2*TW-4,TW-2,'#a98058'); R(c,11*TW+15,(MH-1)*TW+2,2,TW-2,'#634631');
+  R(c,10*TW+8,(MH-2)*TW+4,3*TW,TW-6,'#8d969e');
+});
+
+/* ---------------- 플레이어 ---------------- */
+const PL={x:11.5*TW+8,y:12*TW+8,dir:'up',walk:0,path:null};
+const PCACHE={};
+function playerSprite(dir,f){ const k=dir+f; if(PCACHE[k]) return PCACHE[k]; return PCACHE[k]=mkCanvas(12,18,c=>{
+  const hair='#3a2a20',skin='#f1c8a0',coat='#f4f6f8',line='#2a2a2a';
+  R(c,3,0,6,1,line); R(c,2,1,8,7,line); R(c,3,1,6,3,hair); R(c,2,2,1,3,hair); R(c,9,2,1,3,hair);
+  if(dir==='up'){ R(c,3,3,6,4,hair);} else if(dir==='down'){ R(c,3,4,6,3,skin); R(c,4,5,1,1,'#222'); R(c,7,5,1,1,'#222'); }
+  else { const r=dir==='right'; R(c,r?4:3,4,5,3,skin); R(c,r?7:4,5,1,1,'#222'); R(c,r?3:8,3,1,3,hair); }
+  R(c,1,7,10,8,line); R(c,2,8,8,6,coat); if(dir==='down'){ R(c,5,8,2,3,'#3a6ea5'); R(c,4,8,1,5,'#d6dbdf'); R(c,7,8,1,5,'#d6dbdf'); }
+  if(dir==='left'||dir==='right'){ R(c,dir==='right'?5:6,9,1,4,'#d6dbdf'); }
+  R(c,1,9,1,4,skin); R(c,10,9,1,4,skin); R(c,3,14,6,2,'#2c3e5a');
+  const a=f?1:0; R(c,3,16-a,2,2,'#222'); R(c,7,16-(1-a)*(f?0:0),2,2,'#222'); if(f){ R(c,7,15,2,1,'#2c3e5a'); }
+});}
+
+/* ---------------- 화면 레이아웃 ---------------- */
+const mapCv=$('#map'), mctx=mapCv.getContext('2d'); mapCv.width=MW*TW; mapCv.height=MH*TW;
+const worldEl=$('#world'), invEl=$('#inv');
+let MAPR={left:0,top:0,s:1};
+const slots=[];
+for(let i=0;i<8;i++){ const d=document.createElement('div'); d.className='slot'; invEl.appendChild(d); slots.push(d); }
+function layout(){
+  const W=innerWidth, H=invEl.getBoundingClientRect().height, pt=4/3, mob=IS_MOBILE&&FEATURES.mobileLayout;
+  const m=mob?Math.min(30*pt,Math.max(10*pt,W*.03)):30*pt, vpad=(mob?8:10)*pt, gMin=6;
+  const s=Math.max(16,Math.min(H-2*vpad,(W-2*m-7*gMin)/8)), g=(W-2*m-8*s)/7;
+  slots.forEach((d,i)=>Object.assign(d.style,{left:(m+i*(s+g))+'px',top:((H-s)/2)+'px',width:s+'px',height:s+'px'}));
+  const wr=worldEl.getBoundingClientRect(), sc=Math.min(wr.width/(MW*TW),wr.height/(MH*TW));
+  const cw=MW*TW*sc, ch=MH*TW*sc; MAPR={left:(wr.width-cw)/2,top:(wr.height-ch)/2,s:sc};
+  Object.assign(mapCv.style,{left:MAPR.left+'px',top:MAPR.top+'px',width:cw+'px',height:ch+'px'});
+  if(SEL) deselect();
+}
+addEventListener('resize',layout);
+
+/* ---------------- 인벤토리 ---------------- */
+const inv={
+  has:id=>S.inv.includes(id),
+  async add(id){ const i=S.inv.indexOf(null); if(i<0) return; S.inv[i]=id; const img=renderSlot(i,0); await fade(img,1,300); },
+  async remove(id){ const i=S.inv.indexOf(id); if(i<0) return; S.inv[i]=null; const img=slots[i].querySelector('img');
+    if(SEL&&SEL.el===img) deselect(); if(img){ img.style.pointerEvents='none'; await fade(img,0,300); img.remove(); } },
+};
+function renderSlot(i,o=1){
+  const s=slots[i]; s.innerHTML=''; const id=S.inv[i]; if(!id) return null;
+  const img=new Image(); img.src=iconURL(id); img.draggable=false; img.style.opacity=o;
+  img.onclick=e=>{ e.stopPropagation(); if(cineOn) return; const canPlace=!!popupMod&&!busyN&&!popupAnim; select(img,S.inv[i],canPlace?'place':'info'); };
+  s.appendChild(img); return img;
+}
+function renderInv(){ for(let i=0;i<8;i++) renderSlot(i); }
+
+/* ---------------- 선택·설명창 ---------------- */
+let SEL=null; const descEl=$('#desc');
+function select(el,id,mode,action){
+  deselect(); SEL={el,id}; el.classList.add('sel');
+  descEl.innerHTML=`<div class="dn"></div><div class="dt"></div>`;
+  descEl.querySelector('.dn').textContent=itemName(id); descEl.querySelector('.dt').textContent=itemDesc(id);
+  if(mode==='take'||mode==='place'){ const b=document.createElement('button'); b.className='btn'; b.textContent=mode==='take'?'획득하기':'배치하기';
+    b.onclick=e=>{ e.stopPropagation(); sfx('click'); if(mode==='take'){ deselect(); action(); } else placeSelected(id); };
+    const w=document.createElement('div'); w.className='db'; w.appendChild(b); descEl.appendChild(w); }
+  descEl.style.display='block'; descEl.style.left='0px'; descEl.style.top='0px';
+  const r=el.getBoundingClientRect(), dw=descEl.offsetWidth, dh=descEl.offsetHeight, invH=invEl.offsetHeight;
+  let top=r.top-dh-8; if(top<invH+4) top=r.bottom+8; if(top+dh>innerHeight-4) top=Math.max(invH+4,innerHeight-dh-4);
+  const left=Math.min(innerWidth-dw-8,Math.max(8,r.left+r.width/2-dw/2));
+  descEl.style.left=left+'px'; descEl.style.top=top+'px';
+}
+function deselect(){ if(!SEL) return; SEL.el.classList.remove('sel'); SEL=null; descEl.style.display='none'; }
+document.addEventListener('pointerdown',e=>{ if(!SEL) return; if(descEl.contains(e.target)||SEL.el.contains(e.target)) return; deselect(); },true);
+
+/* ---------------- 화면 위 문구 ---------------- */
+const msgEl=$('#msg'), msgT=$('#msgT');
+const M={stage:null,flash:null,flashT:null,target:undefined,token:0};
+function setQuest(t){ S.quest=t; msgUpdate(); }
+function stageMsg(t){ M.stage=t; msgUpdate(); }
+function flash(t,ms=2000){ ms=Math.max(ms,FEATURES.a11y?2000:0); M.flash=t; clearTimeout(M.flashT); M.flashT=setTimeout(()=>{M.flash=null;msgUpdate();},ms/SPEED); msgUpdate(); }
+async function msgUpdate(){
+  const want=M.flash||M.stage||(popupMod||TUT.box?null:S.quest)||null;
+  if(want===M.target) return; M.target=want; const tk=++M.token;
+  if(+getComputedStyle(msgEl).opacity>0){ await fade(msgEl,0,300); if(tk!==M.token) return; }
+  if(want){ msgT.textContent=want; msgEl.style.display='block'; await fade(msgEl,1,300); } else msgEl.style.display='none';
+}
+
+/* ---------------- 강조 ---------------- */
+const hlEl=$('#hl'), hole=hlEl.querySelector('.hole'); let hlFn=null, hlTimer=null;
+function hlShow(fn){ hlFn=fn; hlEl.style.display='block'; hole.classList.remove('blink'); hlTrack(); clearTimeout(hlTimer);
+  hlTimer=setTimeout(()=>{ void hole.offsetWidth; hole.classList.add('blink'); },200/SPEED); }
+function hlClear(){ hlFn=null; hlEl.style.display='none'; hole.classList.remove('blink'); clearTimeout(hlTimer); }
+// 테두리가 화면 밖으로 잘리지 않도록 화면 안쪽으로 맞추고, 노란 선은 강조 영역 안쪽에 그린다(네 변 모두 보이게)
+function hlTrack(){ if(!hlFn) return; const r=hlFn(); if(!r) return;
+  const l=Math.max(0,r.left-4), t=Math.max(0,r.top-4), rr=Math.min(innerWidth,r.left+r.width+4), b=Math.min(innerHeight,r.top+r.height+4);
+  Object.assign(hole.style,{left:l+'px',top:t+'px',width:(rr-l)+'px',height:(b-t)+'px'}); }
+const elRect=el=>()=>el&&el.getBoundingClientRect();
+function objRect(id){ const o=OBJECTS.find(o=>o.id===id); return ()=>{ const wr=worldEl.getBoundingClientRect(), s=MAPR.s;
+  return {left:wr.left+MAPR.left+o.x*TW*s,top:wr.top+MAPR.top+(o.y-o.top)*TW*s,width:o.w*TW*s,height:(o.h+o.top)*TW*s}; }; }
+
+/* ---------------- 상자 (튜토리얼·텍스트) ---------------- */
+let boxN=0;
+function makeBox(text,btns,{parent=document.body,input=false,inpop=false}={}){
+  const el=document.createElement('div'); el.className='box'+(inpop?' inpop':''); const tx=document.createElement('div'); tx.textContent=text; el.appendChild(tx);
+  let inp=null; if(input){ inp=document.createElement('input'); inp.autocomplete='off'; inp.spellcheck=false; el.appendChild(inp); }
+  const bw=document.createElement('div'); bw.className='btns'; el.appendChild(bw);
+  let resolve; const p=new Promise(r=>resolve=r);
+  btns.forEach(([k,label])=>{ const b=document.createElement('button'); b.className='btn'; b.textContent=label; b.onclick=e=>{e.stopPropagation(); sfx('click'); resolve(k);}; bw.appendChild(b); });
+  parent.appendChild(el); if(!inpop) boxN++;
+  return {el,inp,result:p,async close(ms=300){ await fade(el,0,ms); el.remove(); if(!inpop) boxN--; }};
+}
+async function textBox(text,btns){ const b=makeBox(text,btns); fade(b.el,1,300); const k=await b.result; await b.close(300); return k; }
+
+/* ---------------- 팝업 ---------------- */
+const popupEl=$('#popup'), stageEl=$('#stage'), actsEl=$('#acts'), pcloseEl=$('#pclose');
+let popupMod=null, popupAnim=false, busyN=0, popSess=0;
+async function run(fn){ busyN++; updateX(); try{ await fn(); } catch(e){ console.error(e); } finally{ busyN--; updateX(); if(!busyN) save(); } }
+function later(ms,fn){ const s=popSess; setTimeout(()=>{ if(s===popSess&&popupMod&&!popupAnim) fn(); },ms/SPEED); }
+function updateX(){ const show=FEATURES.closeButton&&popupMod&&!busyN&&!popupAnim&&S.phase==='dev'&&!(popupMod.noClose&&popupMod.noClose());
+  pcloseEl.style.display=show?'flex':'none'; }
+function slide(up){ const a=popupEl.animate([{transform:up?'translateY(100%)':'translateY(0)'},{transform:up?'translateY(0)':'translateY(100%)'}],
+  {duration:500/SPEED,easing:up?'cubic-bezier(.2,.8,.3,1)':'cubic-bezier(.6,0,.8,.4)',fill:'forwards'});
+  return a.finished.then(()=>{ popupEl.style.transform=up?'translateY(0)':'translateY(100%)'; a.cancel(); }); }
+const P={
+  q:k=>popupEl.querySelector(`[data-k="${k}"]`),
+  clear(){ stageEl.innerHTML=''; actsEl.innerHTML=''; popupEl.querySelectorAll('.box.inpop').forEach(b=>b.remove()); },
+  illus(name,{k='ill',o=1,arg}={}){ const cv=mkCanvas(200,125,c=>ILL[name](c,arg)); cv.className='ill'; cv.dataset.k=k; cv.style.opacity=o; stageEl.appendChild(cv); return cv; },
+  item(id,x,y,o={}){ const d=document.createElement('div'); d.className='pitem'; d.dataset.k=o.k||id;
+    Object.assign(d.style,{left:x+'%',top:y+'%',width:(o.size||11)+'%',opacity:o.o??1}); d.innerHTML=`<img src="${iconURL(id)}" draggable="false">`;
+    if(o.take){ d.classList.add('clickable'); d.onclick=e=>{ e.stopPropagation(); if(busyN||popupAnim) return; if(o.can&&!o.can()) return;
+      d.classList.remove('gold'); select(d,id,'take',()=>run(()=>o.take(d))); }; }
+    stageEl.appendChild(d); return d; },
+  sprite(key,x,y,size,o={}){ const d=document.createElement('div'); d.className='psprite'; d.dataset.k=o.k||key;
+    Object.assign(d.style,{left:x+'%',top:y+'%',width:size+'%',opacity:o.o??1}); d.innerHTML=`<img src="${iconURL(key)}" draggable="false">`;
+    if(o.click){ d.style.cursor='pointer'; d.onclick=e=>{e.stopPropagation(); o.click(d);}; } stageEl.appendChild(d); return d; },
+  text(t,x,y,o={}){ const d=document.createElement('div'); d.className='ptext'; d.dataset.k=o.k||'txt'; d.textContent=t; Object.assign(d.style,{left:x+'%',top:y+'%',opacity:o.o??1}); stageEl.appendChild(d); return d; },
+  btn(label,fn,o={}){ const b=document.createElement('button'); b.className='btn'; b.textContent=label; b.dataset.k=o.k||'btn'; if(o.o!=null) b.style.opacity=o.o;
+    b.onclick=e=>{ e.stopPropagation(); if(busyN||popupAnim) return; sfx('click'); fn(b); }; actsEl.appendChild(b); return b; },
+  note(t,o={}){ const d=document.createElement('div'); d.className='pp-note'; d.dataset.k=o.k||'note'; d.textContent=t; d.style.opacity=o.o??1; actsEl.appendChild(d); return d; },
+  remove(...ks){ ks.forEach(k=>{ const e=typeof k==='string'?P.q(k):k; if(e) e.remove(); }); },
+  fadeOut(ms,...els){ return Promise.all(els.map(e=>typeof e==='string'?P.q(e):e).filter(Boolean).map(e=>fade(e,0,ms).then(()=>e.remove()))); },
+  fadeIn(ms,...els){ return Promise.all(els.filter(Boolean).map(e=>fade(e,1,ms))); },
+};
+async function openPopup(mod){
+  deselect(); popupMod=mod; popSess++; popupAnim=true; P.clear(); mod.render();
+  popupEl.style.display='flex'; sfx('open'); msgUpdate(); updateX(); await slide(true); popupAnim=false; updateX(); if(mod.enter) mod.enter();
+}
+async function closePopup(){
+  if(!popupMod) return; popSess++; deselect(); M.stage=null; popupAnim=true; updateX(); sfx('close');
+  const p=slide(false); msgUpdate(); await p; popupEl.style.display='none'; popupMod=null; popupAnim=false; P.clear(); msgUpdate(); updateX(); save();
+}
+pcloseEl.onclick=e=>{ e.stopPropagation(); if(pcloseEl.style.display!=='none') closePopup(); };
+async function takeItem(el,id){ sfx('get'); deselect(); el.style.pointerEvents='none'; await fade(el,0,300); el.remove(); await inv.add(id); }
+function placeSelected(id){
+  const mod=popupMod; const fn=(mod&&mod.accept&&!busyN&&!popupAnim)?mod.accept(id):null; deselect();
+  if(!fn){ sfx('error'); flash('올바른 용도가 아닙니다.',1500); return; }
+  run(async()=>{ sfx('place'); await inv.remove(id); await fn(); });
+}
+const hasAll=ids=>ids.every(i=>inv.has(i));
+
+/* =====================================================================
+   사물별 가상 팝업창
+   ===================================================================== */
+const MODS={};
+
+/* ---- 실험용 쥐 사육장 ---- */
+MODS.cage={
+  tryOpen(){ if(S.rat) return flash('이미 데려갈 쥐를 선택했습니다.',2000); openPopup(this); },
+  render(){ P.illus('cage'); [['ratA',36],['ratB',64]].forEach(([id,x])=>P.item(id,x,63,{size:13,take:el=>this.take(el,id)})); },
+  enter(){ later(1000,()=>stageMsg('당신은 두 마리의 쥐 중 한 마리만 데려갈 수 있습니다.')); },
+  async take(el,id){ S.rat=id.slice(-1); stageMsg(null); const p=takeItem(el,id); await wait(500); await Promise.all([p,closePopup()]); },
+};
+
+/* ---- 생물학적 위해물질 보관함 ---- */
+MODS.hazard={
+  tryOpen(){ if(S.flags.hazardDone) return flash(DONE_TXT); openPopup(this); },
+  render(){ P.illus('hazard'); P.item('virus',50,47,{take:el=>this.take(el)}); },
+  async take(el){ await takeItem(el,'virus'); S.flags.hazardDone=true; await wait(500); await closePopup(); },
+};
+
+/* ---- 실험 테이블 ---- */
+const TQ='다시 실험 테이블로 가서 잡종세포를 잡종세포 배지에 옮기세요.';
+MODS.table={
+  get T(){ return S.pop.table; },
+  tryOpen(){ const T=this.T;
+    if(T.prog) return openPopup(this);
+    if(inv.has('ratA')||inv.has('ratB')){ T.stage='ratWait'; return openPopup(this); }
+    if(hasAll(['hybrid','medium'])){ if(S.quest===TQ) setQuest(null); T.stage='trWait'; T.placed={}; return openPopup(this); }
+    if(S.flags.tableTransferDone||inv.has('bcell')) return flash(DONE_TXT);
+    flash(NOTYET_TXT);
+  },
+  render(){ const T=this.T; P.illus('table');
+    if(T.stage==='ratPlaced'){ P.item('rat'+S.rat,40,55,{size:13,k:'rat'}); this.extractBtn(); }
+    if(T.stage==='bReady') this.bItem(1);
+    if(T.stage==='trWait'){ if(T.placed.hybrid) P.item('hybrid',35,55); if(T.placed.medium) P.item('medium',65,55); if(T.placed.hybrid&&T.placed.medium) this.transferBtn(); }
+    if(T.stage==='trReady'){ P.sprite('emptyDish',35,55,11); this.hmItem(1); }
+  },
+  enter(){ const T=this.T;
+    if(T.stage==='ratWait') later(2000,()=>{ if(T.stage==='ratWait') stageMsg('실험용 쥐를 테이블에 올리십시오.'); });
+    if(T.stage==='bReady') stageMsg('B림프구 클론들이 추출되었습니다');
+    if(T.stage==='trReady') stageMsg('잡종세포를 배지에 옮겼습니다.');
+  },
+  accept(id){ const T=this.T;
+    if(T.stage==='ratWait'&&id==='rat'+S.rat) return async()=>{ T.stage='ratPlaced'; T.prog=true; stageMsg(null);
+      const r=P.item(id,40,55,{size:13,k:'rat',o:0}); await fade(r,1); this.extractBtn(); };
+    if(T.stage==='trWait'&&(id==='hybrid'||id==='medium')&&!T.placed[id]) return async()=>{ T.placed[id]=true; T.prog=true;
+      await fade(P.item(id,id==='hybrid'?35:65,55,{o:0}),1); if(T.placed.hybrid&&T.placed.medium) this.transferBtn(); };
+    return null;
+  },
+  extractBtn(){ P.btn('비장에서 B림프구 추출',b=>run(async()=>{ const T=this.T;
+    await wait(300); b.remove(); const syr=P.sprite('syringe',66,50,14,{o:0}); await fade(syr,1);
+    await moveTo(syr,52,52,800); await wait(400); await moveTo(syr,66,50,800);
+    stageMsg('B림프구 클론들이 추출되었습니다'); await wait(500); await P.fadeOut(300,'rat',syr); await wait(500);
+    T.stage='bReady'; await fade(this.bItem(0),1); })); },
+  bItem(o){ return P.item('bcell',40,55,{o,take:el=>this.takeB(el)}); },
+  async takeB(el){ const T=this.T; stageMsg(null); await takeItem(el,'bcell'); S.flags.tableBDone=true; T.stage='idle'; T.prog=false; await wait(500); await closePopup(); },
+  transferBtn(){ P.btn('잡종세포를 배지에 옮기기',b=>run(async()=>{ const T=this.T;
+    await wait(300); b.remove(); await wait(300);
+    const d1=P.sprite('dropper',35,36,12,{o:0}); await fade(d1,1); await wait(500);
+    await P.fadeOut(300,'hybrid',d1); await wait(300);
+    const dish=P.sprite('emptyDish',35,55,11,{o:0}), df=P.sprite('dropperFull',35,36,12,{o:0}); await P.fadeIn(300,dish,df); await wait(500);
+    await moveTo(df,65,36,600); await wait(500); await P.fadeOut(300,'medium',df);
+    const hm=this.hmItem(0), d2=P.sprite('dropper',65,36,12,{o:0}); await P.fadeIn(300,hm,d2);
+    await wait(1000); await P.fadeOut(300,d2); T.stage='trReady'; stageMsg('잡종세포를 배지에 옮겼습니다.'); })); },
+  hmItem(o){ return P.item('hybridMedium',65,55,{o,take:el=>this.takeHM(el),can:()=>this.T.stage==='trReady'}); },
+  async takeHM(el){ const T=this.T; stageMsg(null); await takeItem(el,'hybridMedium'); S.flags.tableTransferDone=true; T.stage='idle'; T.prog=false;
+    await wait(500); await closePopup(); await wait(500); setQuest('세포 배양기에서 잡종세포를 배양하세요.'); },
+};
+
+/* ---- 세포 배양기 ---- */
+const INC_POS={epithelial:[37,33],cancer:[63,33],medium:[50,69]};
+const IQ_H='세포 배양기에서 잡종세포를 배양하세요.', IQ_C='세포 배양기에서 클론 C를 배양하세요.';
+MODS.incubator={
+  get I(){ return S.pop.incubator; },
+  async tryOpen(){ const I=this.I;
+    if(I.prog) return openPopup(this);
+    const mode=inv.has('hybridMedium')?'hybrid':(inv.has('cloneC')&&S.flags.testerDone)?'clone':null;
+    if(mode){ I.mode=mode; I.stage='cWait'; if(S.quest===IQ_H||S.quest===IQ_C) setQuest(null); lockN++; await wait(500); lockN--; return openPopup(this); }
+    if(S.stock.length){ I.stage='initial'; return openPopup(this); }
+    flash(DONE_TXT);
+  },
+  noClose(){ return S.phase!=='dev'; },
+  render(){ const I=this.I;
+    if(I.stage==='initial'){ P.illus('incOpen'); S.stock.forEach(id=>P.item(id,...INC_POS[id],{take:el=>this.takeStock(el,id),
+      can:()=>S.phase==='dev'||(id==='epithelial'&&TUT.canTake)})); }
+    if(I.stage==='cWait') P.illus('incOpen');
+    if(I.stage==='cDone'){ P.illus('incClosed'); this.doorBtn(); }
+    if(I.stage==='cResult'){ P.illus('incOpen'); this.resItem(1); }
+  },
+  enter(){ const I=this.I;
+    if(I.stage==='cWait') later(500,()=>{ if(I.stage==='cWait') stageMsg(I.mode==='hybrid'?'세포 배양기에 잡종세포가 들어있는 배지를 넣으세요':'배양기에 클론 C를 넣으세요'); });
+    if(I.stage==='cDone') stageMsg('배양 완료!');
+  },
+  async takeStock(el,id){ S.stock=S.stock.filter(x=>x!==id);
+    if(S.phase==='tutorial'){ TUT.canTake=false; const p=takeItem(el,id); tutAfterTake(); await p; return; }
+    await takeItem(el,id); if(!S.stock.length){ await wait(500); await closePopup(); } },
+  accept(id){ const I=this.I; const need=I.mode==='hybrid'?'hybridMedium':'cloneC';
+    if(I.stage!=='cWait'||id!==need) return null;
+    return async()=>{ I.prog=true; I.stage='culturing'; stageMsg(null); const it=P.item(id,50,33,{k:'cin',o:0}); await fade(it,1);
+      await wait(1000); await P.fadeOut(300,'ill',it); await fade(P.illus('incClosed',{k:'closed',o:0}),1,300);
+      await wait(500); stageMsg('배양 중'); await wait(5000); stageMsg(null); await wait(500);
+      stageMsg('배양 완료!'); sfx('done'); I.stage='cDone'; this.doorBtn(); };
+  },
+  doorBtn(){ P.btn('문 열기',b=>run(async()=>{ const I=this.I; await wait(300); b.remove(); stageMsg(null);
+    await P.fadeOut(300,...stageEl.querySelectorAll('.ill')); const ill=P.illus('incOpen',{o:0}); const it=this.resItem(0); I.stage='cResult'; await P.fadeIn(300,ill,it); })); },
+  resItem(o){ const id=this.I.mode==='hybrid'?'hybridCultured':'cloneCCultured'; return P.item(id,50,33,{o,take:el=>this.takeRes(el,id)}); },
+  async takeRes(el,id){ const I=this.I; await takeItem(el,id); S.flags[I.mode==='hybrid'?'hybridCultured':'cloneCCultured']=true;
+    I.prog=false; I.stage='idle'; await wait(500); await closePopup(); },
+};
+
+/* ---- 세포 융합기 ---- */
+const FUS_POS={cancer:[14,19],bcell:[86,19]};
+MODS.fusion={
+  get F(){ return S.pop.fusion; },
+  tryOpen(){ const F=this.F;
+    if(S.flags.fusionDone) return flash(DONE_TXT);
+    if(F.prog) return openPopup(this);
+    if(hasAll(['cancer','bcell'])){ F.stage='place'; F.placed={}; return openPopup(this); }
+    flash(NOTYET_TXT);
+  },
+  render(){ const F=this.F; P.illus('fusion');
+    if(F.stage==='place'){ Object.keys(F.placed).forEach(id=>P.item(id,...FUS_POS[id],{k:'f_'+id})); if(F.placed.cancer&&F.placed.bcell) this.fuseBtn(); }
+    if(F.stage==='ready') this.hyItem(1);
+  },
+  accept(id){ const F=this.F; if(F.stage!=='place'||!FUS_POS[id]||F.placed[id]) return null;
+    return async()=>{ F.placed[id]=true; F.prog=true; await fade(P.item(id,...FUS_POS[id],{k:'f_'+id,o:0}),1); if(F.placed.cancer&&F.placed.bcell) this.fuseBtn(); }; },
+  fuseBtn(){ P.btn('융합하기',b=>run(async()=>{ const F=this.F;
+    await fade(b,0,300); b.remove(); await P.fadeOut(300,'ill','f_cancer','f_bcell'); await wait(300);
+    const eye=P.illus('eye',{k:'eye',o:0}); const note=P.note('※ 실제 세포 융합 과정과 동일하지 않은, 연출된 장면입니다.',{o:0}); await P.fadeIn(300,eye,note);
+    await wait(1000); const c1=P.sprite('cellCancer',26,50,9), c2=P.sprite('cellB',74,50,9); sfx('tick');
+    await Promise.all([moveTo(c1,46,50,2000),moveTo(c2,54,50,2000)]);
+    const fl=document.createElement('div'); fl.className='flashc'; stageEl.appendChild(fl); sfx('flash');
+    const a=fl.animate([{opacity:0},{opacity:1,offset:.45},{opacity:1,offset:.55},{opacity:0}],{duration:1000/SPEED});
+    await wait(500); c1.remove(); c2.remove(); const m=P.sprite('cellHybrid',50,50,12,{k:'merged'}); await a.finished.catch(()=>{}); fl.remove();
+    stageMsg('융합이 완료되었습니다'); await wait(2000);
+    await P.fadeOut(300,eye,m,note); const ill=P.illus('fusion',{o:0}); F.stage='ready'; await P.fadeIn(300,ill,this.hyItem(0)); })); },
+  hyItem(o){ return P.item('hybrid',50,52,{o,take:el=>this.take(el)}); },
+  async take(el){ const F=this.F; stageMsg(null); await takeItem(el,'hybrid'); S.flags.fusionDone=true; F.prog=false; F.stage='idle';
+    await wait(500); await closePopup(); await wait(300); setQuest(TQ); },
+};
+
+/* ---- 현미경 ---- */
+const JAB_POS=[[60,22],[70,36],[74,52],[70,68],[60,82]];
+MODS.microscope={
+  get Mi(){ return S.pop.microscope; },
+  tryOpen(){ const Mi=this.Mi;
+    if(S.flags.microscopeDone) return flash(DONE_TXT);
+    if(Mi.prog) return openPopup(this);
+    if(inv.has('hybridCultured')){ Mi.stage='place'; return openPopup(this); }
+    flash(NOTYET_TXT);
+  },
+  render(){ const Mi=this.Mi; this.anim=false;
+    if(Mi.stage==='place') P.illus('micro');
+    if(Mi.stage==='placed'){ P.illus('micro'); P.item('hybridCultured',50,46,{k:'hc'}); this.splitBtn(); }
+    if(Mi.stage==='split'){ this.eyeScene(1); for(let k=1;k<=Mi.n;k++) P.sprite('jab'+k,...JAB_POS[k-1],10,{k:'jab'}); this.ready=true; }
+  },
+  enter(){ const Mi=this.Mi;
+    if(Mi.stage==='place') stageMsg('배양된 잡종세포를 배치하세요');
+    if(Mi.stage==='split') stageMsg('배양된 잡종세포를 클릭하여 클론을 하나씩 떼어내세요.');
+  },
+  accept(id){ const Mi=this.Mi; if(Mi.stage!=='place'||id!=='hybridCultured') return null;
+    return async()=>{ Mi.prog=true; Mi.stage='placed'; await fade(P.item(id,50,46,{k:'hc',o:0}),1); await wait(300); stageMsg(null); await wait(300); this.splitBtn(); }; },
+  eyeScene(o){ const e=P.illus('eye',{k:'eye',o}); const b=P.sprite('baejab',34,50,17,{k:'bj',o,click:()=>this.click()}); const t=P.text(this.Mi.n+' / 5',50,93,{k:'prog',o}); return [e,b,t]; },
+  splitBtn(){ P.btn('분리하기',b=>run(async()=>{ const Mi=this.Mi;
+    await wait(300); b.remove(); await wait(500); await P.fadeOut(500,'ill','hc');
+    Mi.stage='split'; Mi.n=0; this.ready=false; await P.fadeIn(500,...this.eyeScene(0)); await wait(500);
+    stageMsg('배양된 잡종세포를 클릭하여 클론을 하나씩 떼어내세요.'); this.ready=true; })); },
+  click(){ const Mi=this.Mi; if(!this.ready||busyN||Mi.n>=5) return;
+    Mi.n++; const n=Mi.n; sfx('tick'); P.q('prog').textContent=n+' / 5';
+    const j=P.sprite('jab'+n,34,50,10,{k:'jab',o:0}); fade(j,1,300); const mv=moveTo(j,...JAB_POS[n-1],700);
+    if(n===5) run(async()=>{ await mv; await wait(400);
+      await P.fadeOut(300,...stageEl.querySelectorAll('[data-k="jab"],[data-k="bj"],[data-k="eye"],[data-k="prog"]'));
+      stageMsg(null); await fade(P.illus('micro',{o:0}),1,300); await wait(500);
+      stageMsg('성공적으로 융합된 5종류의 잡종세포 클론을 얻었습니다.'); await wait(500);
+      await Promise.all(LETTERS.map(l=>inv.add('clone'+l))); sfx('done'); await wait(1000);
+      stageMsg(null); S.flags.microscopeDone=true; Mi.prog=false; Mi.stage='idle'; await closePopup(); });
+  },
+};
+
+/* ---- 항원 - 항체 반응 검사기 ---- */
+const LV_Y=i=>(16.5+23*i)/125*100;
+const TESTER_NEED=['epithelial','virus','cloneA','cloneB','cloneC','cloneD','cloneE'];
+MODS.tester={
+  get X(){ return S.pop.tester; },
+  tryOpen(){ const X=this.X;
+    if(S.flags.testerSecondDone) return flash(DONE_TXT);
+    if(X.prog){ this.mode='first'; return openPopup(this); }
+    if(inv.has('treatY')){ this.mode='second'; return openPopup(this); }
+    if(S.flags.testerDone) return flash(DONE_TXT);
+    if(hasAll(TESTER_NEED)){ this.mode='first'; X.stage='ext'; X.placed={}; X.ant={}; X.checked=[]; X.selReady=false; return openPopup(this); }
+    flash(NOTYET_TXT);
+  },
+  render(){ const X=this.X; this.anim=false;
+    if(this.mode==='second'){ P.illus('ext'); X.left.forEach(l=>P.item('clone'+l,50,LV_Y(LETTERS.indexOf(l)),{size:9,o:0,k:'c'+l,take:el=>this.take2(el,'clone'+l)})); return; }
+    if(X.stage==='ext'||X.stage==='extReady'){ P.illus('ext'); LETTERS.forEach((l,i)=>{ if(X.placed[l]) P.item('clone'+l,50,LV_Y(i),{size:9,k:'c'+l}); });
+      if(X.stage==='extReady') this.extBtn(); }
+    if(X.stage==='ant'||X.stage==='antReady'){ this.antScene(1); if(X.ant.virus) P.item('virus',32.5,56.8,{k:'av'}); if(X.ant.epithelial) P.item('epithelial',67.5,56.8,{k:'ae'});
+      if(X.stage==='antReady') this.inputBtn(); }
+    if(X.stage==='graph'){ P.illus('mon',{k:'mon'}); this.buildScreen(true); }
+    if(X.stage==='pickC'){ P.illus('ext'); this.pickScene(1); }
+  },
+  enter(){ const X=this.X;
+    if(this.mode==='second'){ run(async()=>{ await wait(300); await P.fadeIn(500,...stageEl.querySelectorAll('.pitem')); });
+      later(1300,()=>stageMsg('유전자 재조합에 사용할 클론을 하나 선택하세요.')); return; }
+    if(X.stage==='ext') stageMsg('획득한 잡종세포 클론을 모두 넣으세요.');
+    if(X.stage==='ant') stageMsg(X.ant.virus?'대조군으로 사용될 정상적인 세포를 배치하세요.':'항원을 배치하세요.');
+    if(X.stage==='graph'&&X.checked.length<5) stageMsg('홈판에 담긴 항체를 클릭하여 각각의 반응 검사 결과를 확인하세요');
+    if(X.stage==='pickC') stageMsg('선택한 항체를 생산하는 잡종세포 클론을 가져가세요.');
+  },
+  accept(id){ const X=this.X; if(this.mode!=='first') return null;
+    const m=/^clone([A-E])$/.exec(id);
+    if(X.stage==='ext'&&m&&!X.placed[m[1]]) return async()=>{ const l=m[1]; X.placed[l]=true; X.prog=true;
+      await fade(P.item(id,50,LV_Y(LETTERS.indexOf(l)),{size:9,k:'c'+l,o:0}),1);
+      if(LETTERS.every(k=>X.placed[k])){ await wait(500); stageMsg(null); await wait(300); X.stage='extReady'; this.extBtn(); } };
+    if(X.stage==='ant'&&id==='virus'&&!X.ant.virus) return async()=>{ X.ant.virus=true; await fade(P.item('virus',32.5,56.8,{k:'av',o:0}),1);
+      stageMsg(null); await wait(500); stageMsg('대조군으로 사용될 정상적인 세포를 배치하세요.'); };
+    if(X.stage==='ant'&&id==='epithelial'&&X.ant.virus&&!X.ant.epithelial) return async()=>{ X.ant.epithelial=true; await fade(P.item('epithelial',67.5,56.8,{k:'ae',o:0}),1);
+      await wait(500); stageMsg(null); X.stage='antReady'; this.inputBtn(); };
+    return null;
+  },
+  extBtn(){ P.btn('항체 추출하기',b=>run(async()=>{ const X=this.X;
+    await wait(300); b.remove(); await wait(300); await P.fadeOut(300,'ill',...stageEl.querySelectorAll('.pitem')); await wait(300);
+    const cl=P.illus('ext',{k:'closed',o:0,arg:true}); await fade(cl,1,300); await wait(500);
+    stageMsg('항체를 추출하고 있습니다.'); await wait(3000); stageMsg('항체 추출이 완료되었습니다. 이제 항체를 홈판에 옮깁니다'); await wait(1500);
+    stageMsg('항체를 홈판에 옮기고 있습니다.'); await wait(2000); stageMsg('항체를 모두 홈판에 옮겼습니다.'); await wait(1500); stageMsg(null);
+    await P.fadeOut(300,cl); X.stage='ant'; await P.fadeIn(300,...this.antScene(0)); stageMsg('항원을 배치하세요.'); })); },
+  antScene(o){ return [P.illus('ant',{k:'ill',o}),P.text('항원',32.5,24.8,{k:'lb',o}),P.text('대조군',67.5,24.8,{k:'lb',o})]; },
+  inputBtn(){ P.btn('입력하기',b=>run(async()=>{ const X=this.X;
+    await wait(300); b.remove(); await wait(300); await P.fadeOut(300,...stageEl.querySelectorAll('.ill,.pitem,.ptext')); await wait(300);
+    const cl=P.illus('ant',{k:'closed',o:0,arg:true}); await fade(cl,1,300); await wait(500);
+    stageMsg('항원 및 대조군을 인식하고 있습니다.'); await wait(3000); stageMsg(null); await wait(300);
+    stageMsg('항원 및 대조군 입력이 완료되었습니다'); await wait(2000); stageMsg(null); await wait(300); await P.fadeOut(300,cl);
+    X.stage='graph'; X.checked=[]; X.selReady=false; await fade(P.illus('mon',{k:'mon',o:0}),1,300); this.buildScreen(false);
+    await wait(500); await fade(P.q('screen').querySelector('.plate'),1,500); await wait(500);
+    stageMsg('홈판에 담긴 항체를 클릭하여 각각의 반응 검사 결과를 확인하세요'); })); },
+  buildScreen(rest){ const X=this.X; const scr=document.createElement('div'); scr.className='screen'; scr.dataset.k='screen';
+    Object.assign(scr.style,{left:'13%',top:'6.4%',width:'74%',height:'65.6%'});
+    const gx=i=>86+(i+.5)*21.2;
+    scr.innerHTML=`<div class="scr-bar">항원 - 항체 반응 검사기</div>
+      <svg class="chart" viewBox="0 0 200 66" preserveAspectRatio="xMidYMid meet">
+        <g class="axes" opacity="0"><path d="M86 5 V56 H192 V5" fill="none" stroke="#d9dee2" stroke-width=".7"/></g>
+        <g class="legend" opacity="0">
+          <text x="83" y="7" text-anchor="end" class="t">100(%)</text><text x="83" y="57" text-anchor="end" class="t">0</text>
+          <rect x="3" y="15" width="3.4" height="3.4" fill="#e04545"/><text x="8" y="18.1" class="t">: 좀비 바이러스 결합도</text>
+          <rect x="3" y="22" width="3.4" height="3.4" fill="#4573e0"/><text x="8" y="25.1" class="t">: 정상적인 사람 구강 상피세포 결합도</text>
+        </g>
+        ${LETTERS.map((l,i)=>{ const [a,b]=TEST_DATA[l], ha=a*.51, hb=b*.51, x=gx(i);
+          return `<g data-l="${l}" opacity="0"><rect class="bar" x="${x-7.5}" y="${56-ha}" width="7" height="${ha}" fill="#e04545"/>
+            <rect class="bar" x="${x+.5}" y="${56-hb}" width="7" height="${hb}" fill="#4573e0"/>
+            <text class="t lt" x="${x}" y="62.5" text-anchor="middle">${l}</text>
+            <g class="vals" opacity="0"><text class="v" x="${x-4}" y="${54-ha}" text-anchor="middle">${a}%</text><text class="v" x="${x+4}" y="${54-hb}" text-anchor="middle">${b}%</text></g></g>`; }).join('')}
+      </svg>
+      <div class="plate-area"><div class="plate" style="opacity:${rest?1:0}">${LETTERS.map(l=>`<div class="well" data-w="${l}"><span>${l}</span></div>`).join('')}</div>
+      <div class="infos">${LETTERS.map(l=>`<div class="info"><div class="idesc" data-i="${l}">클론 ${l}에서 추출한 항체</div><button class="btn isel" data-s="${l}">선택하기</button></div>`).join('')}</div></div>`;
+    stageEl.appendChild(scr);
+    scr.querySelectorAll('.well').forEach(w=>w.onclick=e=>{ e.stopPropagation(); this.well(w.dataset.w); });
+    scr.querySelectorAll('.isel').forEach(b=>b.onclick=e=>{ e.stopPropagation(); if(busyN) return; sfx('click'); this.choose(b.dataset.s); });
+    if(rest){ if(X.checked.length){ scr.querySelector('.axes').setAttribute('opacity',1); scr.querySelector('.legend').setAttribute('opacity',1); }
+      X.checked.forEach(l=>{ const g=scr.querySelector(`g[data-l="${l}"]`); g.setAttribute('opacity',1); g.querySelector('.vals').setAttribute('opacity',1);
+        scr.querySelector(`.well[data-w="${l}"]`).classList.add('done'); scr.querySelector(`[data-i="${l}"]`).style.opacity=1; });
+      if(X.selReady) scr.querySelectorAll('.isel').forEach(b=>{ b.style.display='inline-block'; b.style.opacity=1; }); }
+  },
+  well(l){ const X=this.X; if(X.stage!=='graph'||this.anim||busyN||X.checked.includes(l)) return;
+    this.anim=true; X.checked.push(l); sfx('tick'); const scr=P.q('screen'), first=X.checked.length===1;
+    scr.querySelector(`.well[data-w="${l}"]`).classList.add('done'); fade(scr.querySelector(`[data-i="${l}"]`),1,300);
+    const svgFade=(g,ms)=>{ const a=g.animate([{opacity:0},{opacity:1}],{duration:ms/SPEED,fill:'forwards'}); return a.finished.then(()=>{g.setAttribute('opacity',1);a.cancel();}); };
+    run(async()=>{
+      if(first){ await wait(500); await svgFade(scr.querySelector('.axes'),300); await wait(300); await svgFade(scr.querySelector('.legend'),300); await wait(300); }
+      const g=scr.querySelector(`g[data-l="${l}"]`); g.setAttribute('opacity',1);
+      g.querySelectorAll('.bar').forEach(b=>{ b.style.transformBox='fill-box'; b.style.transformOrigin='bottom'; b.animate([{transform:'scaleY(0)'},{transform:'scaleY(1)'}],{duration:500/SPEED,easing:'ease-out'}); });
+      g.querySelector('.lt').animate([{opacity:0},{opacity:1}],{duration:300/SPEED});
+      await wait(500); await svgFade(g.querySelector('.vals'),300); this.anim=false;
+      if(X.checked.length===5){ stageMsg(null); await wait(1000); X.selReady=true;
+        await Promise.all([...scr.querySelectorAll('.isel')].map(b=>{ b.style.display='inline-block'; return fade(b,1,300); })); }
+    });
+  },
+  choose(l){ const X=this.X; if(!X.selReady) return;
+    if(l!==ANSWER){ sfx('error'); return flash('다시 한 번 생각해 보세요.',2000); }
+    run(async()=>{ await wait(300); P.q('screen').querySelectorAll('.isel').forEach(b=>b.remove()); await wait(500);
+      await P.fadeOut(500,'screen','mon'); X.stage='pickC'; X.left=['A','B','D','E'];
+      await fade(P.illus('ext',{o:0}),1,500); await P.fadeIn(500,...this.pickScene(0)); await wait(1000);
+      P.q('cC').classList.add('gold'); await wait(300); stageMsg('선택한 항체를 생산하는 잡종세포 클론을 가져가세요.'); });
+  },
+  pickScene(o){ return LETTERS.map((l,i)=>{ const isC=l===ANSWER; const el=P.item('clone'+l,50,LV_Y(i),{size:9,o,k:'c'+l,take:isC?(el=>this.takeC(el)):null});
+    if(isC&&o) el.classList.add('gold'); return el; }); },
+  async takeC(el){ const X=this.X; await takeItem(el,'clone'+ANSWER); await wait(300); stageMsg(null); await wait(500);
+    S.flags.testerDone=true; X.prog=false; X.stage='idle'; await closePopup(); await wait(1000); setQuest(IQ_C); },
+  async take2(el,id){ const X=this.X; await takeItem(el,id); X.left=X.left.filter(l=>'clone'+l!==id); await wait(500); stageMsg(null);
+    S.flags.testerSecondDone=true; await closePopup(); },
+};
+
+/* ---- 단클론항체 치료제 생산기 ---- */
+MODS.producer={
+  get Pr(){ return S.pop.producer; },
+  tryOpen(){ const Pr=this.Pr;
+    if(Pr.prog) return openPopup(this);
+    if(inv.has('edited')){ Pr.mode='Z'; Pr.stage='wait'; return openPopup(this); }
+    if(inv.has('cloneCCultured')){ Pr.mode='Y'; Pr.stage='wait'; return openPopup(this); }
+    if(inv.has('treatY')) return flash(DONE_TXT);
+    flash(NOTYET_TXT);
+  },
+  noClose(){ return this.Pr.stage==='icon'; },
+  render(){ const Pr=this.Pr; P.illus('prod');
+    if(Pr.stage==='placed') this.extractBtn();
+    if(Pr.stage==='icon') this.icon(1);
+  },
+  enter(){ if(this.Pr.stage==='icon') stageMsg('치료제가 완성되었습니다.'); },
+  accept(id){ const Pr=this.Pr; if(Pr.stage!=='wait') return null;
+    if((Pr.mode==='Y'&&id==='cloneCCultured')||(Pr.mode==='Z'&&id==='edited')) return async()=>{ Pr.prog=true; Pr.stage='placed'; this.extractBtn(); };
+    return null; },
+  async seq(name){ await wait(500); stageMsg(name+'에서 단클론항체를 추출하고 있습니다.'); await wait(3000); stageMsg(null); await wait(500);
+    stageMsg('추출한 물질을 정제하고 있습니다.'); await wait(3000); stageMsg(null); await wait(500);
+    stageMsg('단클론항체를 치료제로 만들고 있습니다.'); await wait(5000); stageMsg(null); await wait(500); stageMsg('치료제가 완성되었습니다.'); sfx('done'); },
+  extractBtn(){ P.btn('단클론항체 추출하기',b=>run(async()=>{ const Pr=this.Pr;
+    if(Pr.mode==='Y'){ await wait(300); b.remove(); await this.seq('클론 C'); await wait(1000); Pr.stage='icon'; await fade(this.icon(0),1,300); return; }
+    await wait(300); const bx=makeBox('이 클론에서 항체를 추출하면, 한 번 사용할 만큼의 치료제만 만들 수 있습니다. 계속 진행하시겠습니까?',[['go','진행']],{parent:popupEl,inpop:true});
+    await fade(bx.el,1,300); await bx.result; await wait(300); await bx.close(500); await wait(300); b.remove();
+    await this.seq('유전자가 편집된 클론 '+S.editLetter); await wait(1000);
+    const ic=P.sprite('treatZ',50,48,16,{o:0}); await fade(ic,1,300); await wait(1000); await P.fadeOut(300,ic); stageMsg(null); await wait(500);
+    await inv.add('treatZ'); S.flags.treatmentZDone=true; Pr.prog=false; Pr.stage='idle'; await wait(500); await closePopup();
+    await wait(1000); ending2Prompt(); })); },
+  icon(o){ return P.sprite('treatY',50,48,16,{o,k:'ticon',click:()=>this.iconClick()}); },
+  iconClick(){ const Pr=this.Pr; if(Pr.stage!=='icon'||busyN) return;
+    run(async()=>{ const bx=makeBox(`치료제에 들어 있는 항체의 가변부위 염기 서열은 ${SEQ[S.rat]}입니다.\n(다시 확인하려면 인벤토리에 있는 치료제 아이콘을 누르고 설명창을 확인하세요.)`,[['ok','확인']],{parent:popupEl,inpop:true});
+      await fade(bx.el,1,300); await bx.result; await bx.close(300); await wait(300); await P.fadeOut(300,'ticon'); stageMsg(null); await wait(500);
+      await inv.add('treatY'); S.flags.treatmentYDone=true; Pr.prog=false; Pr.stage='idle'; await wait(500); await closePopup();
+      await wait(1000); ending1Prompt(); });
+  },
+};
+
+/* ---- 유전자 편집기 ---- */
+const EDIT_OK=['cloneA','cloneB','cloneD','cloneE'];
+MODS.editor={
+  get E(){ return S.pop.editor; },
+  tryOpen(){ const E=this.E;
+    if(S.flags.geneEditDone) return flash(DONE_TXT);
+    if(E.prog) return openPopup(this);
+    if(EDIT_OK.filter(id=>inv.has(id)).length===1){ E.stage='wait'; return openPopup(this); }
+    flash(NOTYET_TXT);
+  },
+  render(){ const E=this.E; P.illus('edit');
+    if(E.stage==='input'){ P.item('clone'+E.letter,50,61.6,{k:'ec'}); this.inputBox(1); }
+    if(E.stage==='ready') this.edItem(1);
+  },
+  enter(){ const E=this.E; if(E.stage==='wait') later(1000,()=>{ if(E.stage==='wait') stageMsg('유전자를 편집할 잡종세포 클론을 배치하세요.'); }); },
+  accept(id){ const E=this.E; if(E.stage!=='wait'||!EDIT_OK.includes(id)) return null;
+    return async()=>{ E.prog=true; E.letter=id.slice(-1); S.editLetter=E.letter; await fade(P.item(id,50,61.6,{k:'ec',o:0}),1);
+      await wait(500); stageMsg(null); E.stage='input'; this.inputBox(0,500); }; },
+  inputBox(o,ms=0){ const bx=makeBox('유전자를 편집합니다. 삽입할 염기서열을 정확히 입력해 주십시오.',[['ok','완료']],{parent:popupEl,inpop:true,input:true});
+    bx.el.style.opacity=o; if(!o) fade(bx.el,1,ms);
+    const loop=async()=>{ for(;;){ await bx.result.then(()=>{});
+        const v=bx.inp.value.toUpperCase().replace(/[^ATGC]/g,'');
+        if(v===SEQ[other(S.rat)]) break; sfx('error'); flash('올바른 염기서열이 아닙니다.',2000);
+        bx.result=new Promise(r=>{ bx.el.querySelector('.btns .btn').onclick=e=>{e.stopPropagation(); sfx('click'); r('ok');}; }); }
+      run(async()=>{ const E=this.E; await wait(500); await bx.close(300); await wait(500); await P.fadeOut(300,'ec'); await wait(500);
+        stageMsg('유전자 가위가 클론의 가변부위 DNA를 잘라내고 있습니다.'); await wait(5000);
+        stageMsg('잘린 부위에 새로운 염기서열을 삽입하고 있습니다.'); await wait(5000);
+        stageMsg('유전자 편집이 완료되었습니다.'); sfx('done'); await wait(300); E.stage='ready'; await fade(this.edItem(0),1,300); }); };
+    bx.inp.addEventListener('keydown',e=>{ if(e.key==='Enter') bx.el.querySelector('.btns .btn').click(); });
+    loop();
+  },
+  edItem(o){ return P.item('edited',50,61.6,{o,take:el=>this.take(el)}); },
+  async take(el){ const E=this.E; await takeItem(el,'edited'); await wait(300); stageMsg(null); S.flags.geneEditDone=true; E.prog=false; E.stage='idle'; await closePopup(); },
+};
+
+/* ---------------- 엔딩 ---------------- */
+const cineEl=$('#cine'); let cineOn=false;
+function playVideo(src){ return new Promise(res=>{
+  cineOn=true; cineEl.innerHTML=''; cineEl.style.display='flex'; cineEl.style.opacity=1;
+  const v=document.createElement('video'); v.src=src; v.playsInline=true; v.setAttribute('playsinline',''); cineEl.appendChild(v);
+  let done=false; const fin=()=>{ if(done) return; done=true; v.remove(); res(); };
+  v.onended=fin;
+  v.onerror=()=>{ v.remove(); placeholder(src).then(fin); };
+  v.play().catch(()=>{ if(!done&&v.isConnected){ const b=document.createElement('button'); b.className='btn'; b.textContent='▶ 영상 재생'; b.style.position='absolute';
+    b.onclick=()=>{ b.remove(); v.play(); }; cineEl.appendChild(b); } });
+  if(DBG.on){ const sk=document.createElement('button'); sk.className='btn'; sk.textContent='건너뛰기(디버그)'; Object.assign(sk.style,{position:'absolute',right:'12px',bottom:'12px'});
+    sk.onclick=()=>{ sk.remove(); fin(); }; cineEl.appendChild(sk); }
+});}
+function placeholder(src){ return new Promise(res=>{
+  const d=document.createElement('div'); d.className='ph'; cineEl.appendChild(d); let t=VIDEO.placeholderSec;
+  const draw=()=>{ d.innerHTML=`영상 자리 (${src})<br>파일을 넣으면 이곳에서 재생됩니다.<br>${t}초`; }; draw();
+  const sk=document.createElement('button'); sk.className='btn'; sk.textContent='건너뛰기'; sk.style.marginTop='14px';
+  let iv; const end=()=>{ clearInterval(iv); d.remove(); sk.remove(); res(); };
+  sk.onclick=end; cineEl.appendChild(sk); iv=setInterval(()=>{ t--; draw(); if(t<=0) end(); },1000/SPEED);
+});}
+async function ending1Prompt(){
+  lockN++; await textBox('이제 좀비 바이러스 치료제를 감염된 사람들에게 투여해 봅시다.',[['go','투여하기']]);
+  await playVideo(VIDEO.ending1); await fade(cineEl,0,2000); cineEl.style.display='none'; cineEl.innerHTML=''; cineOn=false;
+  await textBox('치료제를 투여해도 치료되지 않는 감염자가 나타났습니다. 과학 선생님의 일지에는 해결 방법이 나와 있지 않습니다...',[['ok','해결 방법을 생각해 보자.']]);
+  S.flags.ending1Seen=true; lockN--; save();
+}
+async function ending2Prompt(){
+  lockN++; await textBox('이제 두 좀비 바이러스 치료제를 섞어 마지막 감염된 사람들에게 투여해 봅시다.',[['go','투여하기']]);
+  await playVideo(VIDEO.ending2); S.phase='ending'; S.flags.finished=true; lockN--; save(); showEnd(false);
+}
+async function showEnd(instant){
+  cineOn=true; cineEl.innerHTML='<div class="endt">당신은 좀비 바이러스를 막고 학교를 지켜낸 영웅입니다!</div><div class="endb">The END</div>';
+  cineEl.style.display='flex'; cineEl.style.opacity=1; const [a,b]=cineEl.children;
+  const r=document.createElement('button'); r.className='btn endr'; r.textContent='처음부터 다시'; r.onclick=e=>{ e.stopPropagation(); askRestart(); }; cineEl.appendChild(r);
+  if(instant){ a.style.opacity=1; b.style.opacity=1; r.style.opacity=1; return; }
+  sfx('end'); await fade(a,1,1000); await fade(b,1,3000); await wait(1000); await fade(r,1,500);
+}
+async function askRestart(){ if(boxN) return;
+  const k=await textBox('처음부터 다시 시작할까요?\n지금까지의 진행 상황이 모두 지워집니다.',[['no','취소'],['yes','처음부터 다시']]);
+  if(k==='yes'){ clearSave(); location.reload(); } }
+const restartEl=$('#restart'); restartEl.onclick=e=>{ e.stopPropagation(); askRestart(); };
+
+/* ---------------- 튜토리얼 ---------------- */
+const TUT={lock:false,waitInc:false,canTake:false,box:false};
+const tutEl=$('#tut');
+function tut(text,btns){ return new Promise(res=>{
+  TUT.box=true; msgUpdate(); tutEl.querySelector('.tx').textContent=text; const bw=tutEl.querySelector('.btns'); bw.innerHTML='';
+  btns.forEach(([k,l])=>{ const b=document.createElement('button'); b.className='btn'; b.textContent=l; b.onclick=e=>{e.stopPropagation(); sfx('click'); res(k);}; bw.appendChild(b); });
+  if(tutEl.style.display!=='block'){ tutEl.style.display='block'; fade(tutEl,1,200); }
+});}
+async function tutHide(){ await fade(tutEl,0,200); tutEl.style.display='none'; TUT.box=false; msgUpdate(); }
+async function runTutorial(){
+  TUT.lock=true;
+  const r=await tut('이곳은 XX과학고등학교의 과학실입니다.',[['skip','튜토리얼 건너뛰기'],['next','다음']]);
+  if(r==='skip'){ await tutHide(); return finishTutorial(true); }
+  await tutHide(); hlShow(elRect(worldEl)); await wait(1500);
+  await tut('과학실 내부에는 다양한 재료와 실험 장비들이 갖춰져 있습니다.',[['next','다음']]); hlClear();
+  await tut('교사 A가 남긴 연구일지를 읽고 세포 융합 기술을 활용하여 단클론항체 치료제를 만드십시오.',[['next','다음']]);
+  await tut(IS_MOBILE?'가상 조이패드를 이용하여 이동할 수 있습니다.':'방향키나 WASD, 또는 마우스 클릭으로 이동할 수 있습니다.',[['next','다음']]);
+  await tutHide(); hlShow(objRect('incubator')); await wait(1500);
+  await tut(IS_MOBILE?"특정 사물에 다가가면 '상호작용' 버튼을 눌러 상호작용할 수 있습니다.":'특정 사물에 다가가면 스페이스 바를 눌러 상호작용할 수 있습니다.',[['next','다음']]);
+  await tutHide(); hlClear(); await wait(500); setQuest('세포 배양기를 조사하세요.'); TUT.lock=false; TUT.waitInc=true;
+}
+async function tutIncubator(){
+  TUT.waitInc=false; setQuest(null); S.pop.incubator.stage='initial'; await openPopup(MODS.incubator);
+  await wait(1000); hlShow(elRect(popupEl)); stageMsg('사물에 상호작용하면 특정한 작업을 할 수 있는 영역이 열립니다.');
+  await wait(2000); stageMsg(null); hlShow(elRect(P.q('epithelial'))); await wait(1500);
+  stageMsg("안에 있는 물건을 클릭한 뒤 '획득하기' 버튼을 누르면 그것을 획득할 수 있습니다"); TUT.canTake=true;
+}
+async function tutAfterTake(){
+  TUT.lock=true; hlClear(); stageMsg(null); await wait(300); await closePopup(); await wait(2000);
+  hlShow(elRect(invEl)); await tut('이곳에서 당신이 가지고 있는 물건을 확인할 수 있습니다.',[['next','다음']]);
+  await tut("물건을 배치해야 할 때에는 인벤토리에서 물건을 클릭한 뒤 '배치하기' 버튼을 누르면 됩니다.",[['next','다음']]);
+  await tutHide(); hlShow(objRect('fusion')); stageMsg('어떤 사물은 정해진 물건을 인벤토리에 가지고 있을 때에만 상호작용할 수 있습니다');
+  await wait(2000); stageMsg(null); hlClear();
+  await tut('교사 A가 남긴 연구 일지를 읽고 순서에 맞게 치료제를 개발하십시오',[['ok','확인']]); await tutHide(); finishTutorial(false);
+}
+function finishTutorial(skipped){ S.phase='dev'; S.skipped=skipped; TUT.lock=false; TUT.waitInc=false; hlClear(); save(); }
+
+/* ---------------- 입력·이동 ---------------- */
+let lockN=0;
+const locked=()=>!!popupMod||popupAnim||lockN>0||boxN>0||TUT.lock||TUT.box||cineOn||S.phase==='ending';
+const KEYS={}; const PADK={};
+const KMAP={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
+let _kb='';
+function _h(s){ let h=0x811c9dc5; for(const ch of s){ h^=ch.charCodeAt(0); h=Math.imul(h,0x01000193)>>>0; } return h; }
+function _c(e){ const c=e.code; if(/^Key[A-Z]$/.test(c)) return c[3].toLowerCase(); if(/^Digit\d$/.test(c)) return c[5]; if(/^Numpad\d$/.test(c)) return c[6];
+  if(c==='Slash'||c==='NumpadDivide') return '/'; return '#'; }
+addEventListener('keydown',e=>{
+  if(e.target&&e.target.tagName==='INPUT') return;
+  if(FEATURES.debug&&!e.repeat){ _kb=(_kb+_c(e)).slice(-8); if(_h(_kb)===3284227405){ _kb=''; toggleDebug(); } }
+  if(KMAP[e.code]){ KEYS[KMAP[e.code]]=true; e.preventDefault(); }
+  if(e.code==='Space'){ e.preventDefault(); if(!e.repeat) tryInteract(); }
+  if(e.code==='Escape'&&pcloseEl.style.display==='flex') closePopup();
+});
+addEventListener('keyup',e=>{ if(KMAP[e.code]) KEYS[KMAP[e.code]]=false; });
+addEventListener('blur',()=>{ for(const k in KEYS) KEYS[k]=false; });
+document.querySelectorAll('#pad button').forEach(b=>{ const d=b.dataset.d;
+  const on=e=>{ e.preventDefault(); PADK[d]=true; b.classList.add('on'); }, off=()=>{ PADK[d]=false; b.classList.remove('on'); };
+  b.addEventListener('pointerdown',on); b.addEventListener('pointerup',off); b.addEventListener('pointerleave',off); b.addEventListener('pointercancel',off); });
+$('#act').addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); tryInteract(); });
+mapCv.addEventListener('pointerdown',e=>{
+  if(locked()) return; const r=mapCv.getBoundingClientRect(); const mx=(e.clientX-r.left)/MAPR.s, my=(e.clientY-r.top)/MAPR.s;
+  PL.path=findPath(mx,my);
+});
+function blocked(x,y){ for(const [px,py] of [[x-5,y-3],[x+5,y-3],[x-5,y+3],[x+5,y+3]]){ const tx=Math.floor(px/TW), ty=Math.floor(py/TW);
+  if(tx<0||ty<0||tx>=MW||ty>=MH||SOLID[ty][tx]) return true; } return false; }
+function findPath(mx,my){
+  const sx=Math.floor(PL.x/TW), sy=Math.floor(PL.y/TW); const dist=[...Array(MH)].map(()=>Array(MW).fill(-1)), prev={};
+  const q=[[sx,sy]]; dist[sy][sx]=0;
+  while(q.length){ const [x,y]=q.shift(); for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx=x+dx, ny=y+dy;
+    if(nx<0||ny<0||nx>=MW||ny>=MH||SOLID[ny][nx]||dist[ny][nx]>=0) continue; dist[ny][nx]=dist[y][x]+1; prev[nx+','+ny]=[x,y]; q.push([nx,ny]); } }
+  let best=null, bd=1e9; for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){ if(dist[y][x]<0) continue;
+    const d=Math.hypot((x+.5)*TW-mx,(y+.5)*TW-my)+dist[y][x]*.01; if(d<bd){ bd=d; best=[x,y]; } }
+  if(!best) return null; const path=[]; let cur=best;
+  while(cur&&!(cur[0]===sx&&cur[1]===sy)){ path.unshift([(cur[0]+.5)*TW,(cur[1]+.5)*TW]); cur=prev[cur[0]+','+cur[1]]; }
+  return path.length?path:null;
+}
+let NEAR=null; const labelsEl=$('#labels'), hintEl=$('#hint'), actEl=$('#act');
+function tryInteract(){ if(locked()||!NEAR) return; interact(NEAR); }
+function interact(o){
+  if(S.phase==='tutorial'){ if(TUT.waitInc&&o.id==='incubator') tutIncubator(); return; }
+  if(S.phase!=='dev') return; deselect(); MODS[o.id].tryOpen();
+}
+function updateNear(){
+  let n=null; for(const o of OBJECTS){ const x0=o.x*TW-6, y0=o.y*TW-6, x1=(o.x+o.w)*TW+6, y1=(o.y+o.h)*TW+6;
+    if(PL.x+5>x0&&PL.x-5<x1&&PL.y+3>y0&&PL.y-3<y1){ n=o; break; } }
+  NEAR=n; const show=n&&!locked();
+  if(show){ let lb=labelsEl.firstChild; if(!lb){ lb=document.createElement('div'); lb.className='olabel'; labelsEl.appendChild(lb); }
+    lb.textContent=n.name; lb.style.left=(MAPR.left+(n.x+n.w/2)*TW*MAPR.s)+'px'; lb.style.top=(MAPR.top+(n.y-n.top)*TW*MAPR.s-4)+'px'; }
+  else labelsEl.innerHTML='';
+  restartEl.style.display=S.phase==='dev'&&!locked()?'block':'none';
+  hintEl.style.display=show&&!IS_MOBILE?'block':'none'; actEl.style.display=show&&IS_MOBILE?'block':'none';
+}
+let last=performance.now();
+function frame(t){
+  const dt=Math.min(.05,(t-last)/1000); last=t;
+  let dx=0, dy=0;
+  if(!locked()){ const K=k=>KEYS[k]||PADK[k];
+    if(K('left'))dx-=1; if(K('right'))dx+=1; if(K('up'))dy-=1; if(K('down'))dy+=1;
+    if(dx||dy) PL.path=null;
+    else if(PL.path){ const [tx,ty]=PL.path[0]; const ddx=tx-PL.x, ddy=ty-PL.y, d=Math.hypot(ddx,ddy);
+      if(d<1.5){ PL.x=tx; PL.y=ty; PL.path.shift(); if(!PL.path.length) PL.path=null; } else { dx=ddx/d; dy=ddy/d; } }
+  } else PL.path=null;
+  if(dx||dy){ const sp=72*dt, l=Math.hypot(dx,dy); const vx=dx/l*sp, vy=dy/l*sp; let moved=false;
+    if(!blocked(PL.x+vx,PL.y)){ PL.x+=vx; moved=true; } if(!blocked(PL.x,PL.y+vy)){ PL.y+=vy; moved=true; }
+    if(!moved) PL.path=null;
+    PL.dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'); PL.walk+=dt*8;
+    if(SEL&&!popupMod) deselect();
+  } else PL.walk=0;
+  mctx.imageSmoothingEnabled=false; mctx.drawImage(FLOOR,0,0);
+  const list=SPRITES.map(s=>({b:s.base,draw:()=>mctx.drawImage(s.cv,s.x,s.y)}));
+  list.push({b:PL.y+3,draw:()=>{ mctx.fillStyle='rgba(0,0,0,.25)'; mctx.fillRect(Math.round(PL.x)-5,Math.round(PL.y)+1,10,3);
+    mctx.drawImage(playerSprite(PL.dir,Math.floor(PL.walk)%2),Math.round(PL.x)-6,Math.round(PL.y)-15); }});
+  list.sort((a,b)=>a.b-b.b).forEach(o=>o.draw());
+  updateNear(); hlTrack();
+  requestAnimationFrame(frame);
+}
+
+/* ---------------- 디버그 (비공개) ---------------- */
+const DBG={on:false};
+const STEPS=[
+  ['튜토리얼 건너뛴 직후',s=>{ s.phase='dev'; s.skipped=true; }],
+  ['튜토리얼 완료 직후',s=>{ s.stock=['cancer','medium']; s.inv[0]='epithelial'; }],
+  ['재료 모두 획득(쥐 A)',s=>{ s.stock=[]; s.rat='A'; ['cancer','medium','ratA','virus'].forEach(i=>add(s,i)); s.flags.hazardDone=true; }],
+  ['B림프구 획득',s=>{ rep(s,'ratA','bcell'); s.flags.tableBDone=true; }],
+  ['잡종세포 획득',s=>{ rm(s,'cancer'); rep(s,'bcell','hybrid'); s.flags.fusionDone=true; s.quest=TQ; }],
+  ['배지 이식 완료',s=>{ rm(s,'medium'); rep(s,'hybrid','hybridMedium'); s.flags.tableTransferDone=true; s.quest=IQ_H; }],
+  ['잡종세포 배양 완료',s=>{ rep(s,'hybridMedium','hybridCultured'); s.flags.hybridCultured=true; s.quest=null; }],
+  ['클론 A~E 획득',s=>{ rm(s,'hybridCultured'); LETTERS.forEach(l=>add(s,'clone'+l)); s.flags.microscopeDone=true; }],
+  ['클론 C 선택 완료',s=>{ ['epithelial','virus','cloneA','cloneB','cloneD','cloneE'].forEach(i=>rm(s,i)); s.flags.testerDone=true; s.quest=IQ_C; }],
+  ['클론 C 배양 완료',s=>{ rep(s,'cloneC','cloneCCultured'); s.flags.cloneCCultured=true; s.quest=null; }],
+  ['치료제 Y 완성(엔딩1 본 뒤)',s=>{ rep(s,'cloneCCultured','treatY'); s.flags.treatmentYDone=true; s.flags.ending1Seen=true; }],
+  ['검사기에서 클론 A 회수',s=>{ add(s,'cloneA'); s.pop.tester.left=['B','D','E']; s.flags.testerSecondDone=true; }],
+  ['유전자 편집 완료',s=>{ rep(s,'cloneA','edited'); s.editLetter='A'; s.flags.geneEditDone=true; }],
+];
+function add(s,id){ const i=s.inv.indexOf(null); if(i>=0) s.inv[i]=id; }
+function rm(s,id){ const i=s.inv.indexOf(id); if(i>=0) s.inv[i]=null; }
+function rep(s,a,b){ const i=s.inv.indexOf(a); if(i>=0) s.inv[i]=b; else add(s,b); }
+function applyState(ns){
+  popSess++; popupMod=null; popupAnim=false; busyN=0; lockN=0; popupEl.style.display='none'; popupEl.style.transform='translateY(100%)'; P.clear();
+  document.querySelectorAll('.box').forEach(b=>b.remove()); boxN=0; tutEl.style.display='none'; tutEl.style.opacity=0; TUT.lock=TUT.box=TUT.waitInc=TUT.canTake=false;
+  cineOn=false; cineEl.style.display='none'; cineEl.innerHTML=''; hlClear(); deselect(); M.stage=null; M.flash=null;
+  const keepMute=S.muted; S=ns; S.muted=keepMute; for(const k in ICACHE) delete ICACHE[k]; renderInv(); msgUpdate(); updateX(); save();
+}
+function toggleDebug(){ DBG.on=!DBG.on; const d=$('#dbg'); if(!DBG.on){ d.style.display='none'; SPEED=1; return; } buildDebug(); d.style.display='block'; }
+function buildDebug(){ const d=$('#dbg');
+  d.innerHTML=`<div class="h">디버그</div><div id="dSteps"></div><div class="h">쥐 선택</div><button data-r="A">쥐 A</button><button data-r="B">쥐 B</button>
+    <div class="h">속도</div><button data-sp="1">×1</button><button data-sp="4">×4</button><button data-sp="10">×10</button> <span id="dSp"></span>
+    <div class="h">아이템</div><select id="dItem">${Object.keys(ITEMS).map(k=>`<option value="${k}">${itemName(k)}</option>`).join('')}</select>
+    <button id="dGive">지급</button><button id="dClear">인벤토리 비우기</button>
+    <div class="h">기타</div><button id="dTut">튜토리얼 처음부터</button><button id="dReset">저장 삭제</button><button id="dClose">닫기</button>`;
+  const st=d.querySelector('#dSteps');
+  STEPS.forEach((s,i)=>{ const b=document.createElement('button'); b.textContent=(i+1)+'. '+s[0]; b.onclick=()=>{ const ns=freshState(); const r=S.rat&&S.rat!=='A'?S.rat:'A';
+    for(let k=0;k<=i;k++) STEPS[k][1](ns); if(ns.rat&&r==='B'){ ns.rat='B'; ns.inv=ns.inv.map(x=>x==='ratA'?'ratB':x); } applyState(ns); }; st.appendChild(b); });
+  d.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{ S.rat=b.dataset.r; S.inv=S.inv.map(x=>/^rat[AB]$/.test(x||'')?'rat'+S.rat:x); for(const k in ICACHE) delete ICACHE[k]; renderInv(); save(); });
+  const sp=()=>d.querySelector('#dSp').textContent='현재 ×'+SPEED; sp();
+  d.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{ SPEED=+b.dataset.sp; sp(); });
+  d.querySelector('#dGive').onclick=()=>{ const id=d.querySelector('#dItem').value; if(/^treat|edited/.test(id)&&!S.rat) S.rat='A'; if(id==='edited'&&!S.editLetter) S.editLetter='A'; inv.add(id); };
+  d.querySelector('#dClear').onclick=()=>{ S.inv=Array(8).fill(null); renderInv(); save(); };
+  d.querySelector('#dTut').onclick=()=>{ applyState(freshState()); clearSave(); NOSAVE=false; runTutorial(); };
+  d.querySelector('#dReset').onclick=()=>{ clearSave(); NOSAVE=false; };
+  d.querySelector('#dClose').onclick=()=>toggleDebug();
+}
+
+/* ---------------- 시작 ---------------- */
+addEventListener('beforeunload',()=>save());
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) save(); });
+function start(){
+  layout(); const sv=loadSave();
+  if(sv&&sv.phase!=='tutorial'){ S=Object.assign(freshState(),sv); if(S.player){ PL.x=S.player.x; PL.y=S.player.y; PL.dir=S.player.dir||'up'; } }
+  renderInv(); msgUpdate(); requestAnimationFrame(frame);
+  if(S.phase==='tutorial') runTutorial();
+  else if(S.flags.finished) showEnd(true);
+  else if(S.flags.treatmentZDone) ending2Prompt();
+  else if(S.flags.treatmentYDone&&!S.flags.ending1Seen) ending1Prompt();
+}
+(document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(start,start);
+</script>
+</body>
+</html>
