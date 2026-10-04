@@ -28,7 +28,7 @@ button{font-family:var(--font)}
 .slot img.sel{outline:2px solid var(--select);outline-offset:1px}
 
 /* 메타버스 영역 */
-#world{position:fixed;left:0;right:0;bottom:0;top:var(--inv-h);background:#101010;overflow:hidden}
+#world{position:fixed;left:0;right:0;bottom:0;top:var(--inv-h);background:#060708;overflow:hidden}
 #map{position:absolute;cursor:pointer}
 .olabel{position:absolute;transform:translate(-50%,-100%);width:max-content;background:rgba(0,0,0,.7);color:#fff;padding:3px 9px;font-size:12px;
   white-space:nowrap;pointer-events:none;border-radius:3px;z-index:5}
@@ -104,6 +104,9 @@ body.mobile #pad{display:grid}
 #restart{position:absolute;top:8px;right:8px;z-index:6;display:none;background:transparent;border:1px solid rgba(255,255,255,.25);
   color:rgba(255,255,255,.45);font-size:11px;padding:4px 8px;cursor:pointer;min-width:var(--btn-min);min-height:var(--btn-min)}
 #restart:hover{color:#fff;border-color:#fff}
+#phase{position:absolute;top:8px;left:8px;z-index:6;border:1px solid #fff;color:#fff;font-size:11px;padding:4px 8px;
+  pointer-events:none;background:rgba(0,0,0,.35);line-height:normal}
+body.a11y #phase{min-height:var(--btn-min);display:flex;align-items:center}
 .endr{margin-top:28px;opacity:0}
 
 /* 검사기 화면 */
@@ -150,6 +153,7 @@ body.mobile #pad{display:grid}
   </div>
   <div id="cine"></div>
   <button id="restart">↺ 처음부터</button>
+  <div id="phase"></div>
 </div>
 <div id="msg"><span id="msgT"></span></div>
 <div id="desc"></div>
@@ -227,15 +231,19 @@ document.body.classList.toggle('a11y',FEATURES.a11y);
 const LETTERS=['A','B','C','D','E'];
 const other=l=>l==='A'?'B':'A';
 
+// 애니메이션 완료 대기. 탭이 백그라운드로 가서 화면 갱신이 멈춰도 타이머로 끝을 보장한다.
+function animDone(a,ms,finish){ return new Promise(res=>{ let done=false; const end=()=>{ if(done) return; done=true; finish(); a.cancel(); res(); };
+  a.finished.then(end,end); setTimeout(end,ms+120); }); }
 function fade(el,to,ms=300){
   if(!el) return Promise.resolve();
-  const from=getComputedStyle(el).opacity;
-  const a=el.animate([{opacity:from},{opacity:to}],{duration:Math.max(1,ms/SPEED),easing:'ease',fill:'forwards'});
-  return a.finished.then(()=>{el.style.opacity=to;a.cancel();}).catch(()=>{});
+  const from=getComputedStyle(el).opacity, d=Math.max(1,ms/SPEED);
+  const a=el.animate([{opacity:from},{opacity:to}],{duration:d,easing:'ease',fill:'forwards'});
+  return animDone(a,d,()=>{el.style.opacity=to;});
 }
 function moveTo(el,x,y,ms){
-  const a=el.animate([{left:el.style.left,top:el.style.top},{left:x+'%',top:y+'%'}],{duration:Math.max(1,ms/SPEED),easing:'ease-in-out',fill:'forwards'});
-  return a.finished.then(()=>{el.style.left=x+'%';el.style.top=y+'%';a.cancel();}).catch(()=>{});
+  const d=Math.max(1,ms/SPEED);
+  const a=el.animate([{left:el.style.left,top:el.style.top},{left:x+'%',top:y+'%'}],{duration:d,easing:'ease-in-out',fill:'forwards'});
+  return animDone(a,d,()=>{el.style.left=x+'%';el.style.top=y+'%';});
 }
 
 /* ---------------- 효과음 ---------------- */
@@ -458,9 +466,9 @@ const OBJECTS=[
 ];
 // 장식 사물 (동선 구성용)
 const DECOR=[
-  {d:'shelf',x:6,y:2,w:2,h:1,top:1},{d:'shelf',x:14,y:2,w:2,h:1,top:1},{d:'plant',x:22,y:2,w:1,h:1,top:1},
+  {d:'shelf',x:6,y:2,w:2,h:1,top:1},{d:'shelf',x:14,y:2,w:2,h:1,top:1},
   {d:'bench',x:6,y:6,w:2,h:1,top:1},{d:'bench',x:15,y:6,w:2,h:1,top:1},{d:'trash',x:22,y:5,w:1,h:1,top:0},
-  {d:'sink',x:21,y:9,w:2,h:1,top:1},{d:'locker',x:20,y:10,w:2,h:2,top:1},{d:'plant',x:22,y:12,w:1,h:1,top:1},
+  {d:'sink',x:21,y:9,w:2,h:1,top:1},{d:'locker',x:20,y:10,w:2,h:2,top:1},
   {d:'stool',x:5,y:11,w:1,h:1,top:0},{d:'stool',x:6,y:8,w:1,h:1,top:0},
 ];
 const SOLID=[...Array(MH)].map((_,y)=>[...Array(MW)].map((_,x)=>y<2||y===MH-1||x===0||x===MW-1));
@@ -470,15 +478,33 @@ function mkCanvas(w,h,fn){ const cv=document.createElement('canvas'); cv.width=w
   for(let y=o.y;y<o.y+o.h;y++)for(let x=o.x;x<o.x+o.w;x++) SOLID[y][x]=true;
   SPRITES.push({cv:mkCanvas(o.w*TW,(o.h+o.top)*TW,c=>OBJ_DRAW[o.d](c)),x:o.x*TW,y:(o.y-o.top)*TW,base:(o.y+o.h)*TW});
 });
+// 어둡고 으스스한 테마 (출입 금지 연구 구역)
+let _seed=7; const rnd=()=>{ _seed=(_seed*16807)%2147483647; return _seed/2147483647; };
 const FLOOR=mkCanvas(MW*TW,MH*TW,c=>{
-  for(let y=2;y<MH-1;y++)for(let x=1;x<MW-1;x++){ R(c,x*TW,y*TW,TW,TW,(x+y)%2?'#c9ccce':'#d1d4d6'); R(c,x*TW,y*TW,TW,1,'#b9bcbe'); R(c,x*TW,y*TW,1,TW,'#b9bcbe'); }
-  R(c,0,0,MW*TW,32,'#7f8a94'); R(c,0,28,MW*TW,4,'#5b636b'); for(let x=0;x<MW*TW;x+=24) R(c,x,0,1,28,'#76818b');
-  [[2,3],[21,2]].forEach(([tx,n])=>{ box(c,tx*TW,4,n*TW,20,'#a9d0e8','#d6ecf7','#7fb2cf','#4b5560'); R(c,tx*TW+n*8,4,2,20,'#4b5560'); R(c,tx*TW,13,n*TW,2,'#4b5560'); });
-  box(c,13*TW-4,3,6*TW+8,22,'#2f5a46','#3d6e57','#264a39','#6b4a2f'); R(c,13*TW+8,9,20,1,'#d8e6dd'); R(c,13*TW+8,13,34,1,'#d8e6dd'); R(c,13*TW+50,16,22,1,'#d8e6dd');
-  R(c,0,0,TW,MH*TW,'#5b636b'); R(c,(MW-1)*TW,0,TW,MH*TW,'#5b636b'); R(c,0,(MH-1)*TW,MW*TW,TW,'#5b636b'); R(c,TW-2,32,2,(MH-3)*TW,'#4b5258'); R(c,(MW-1)*TW,32,2,(MH-3)*TW,'#4b5258');
-  R(c,11*TW,(MH-1)*TW,2*TW,TW,'#8a6544'); R(c,11*TW+2,(MH-1)*TW+2,2*TW-4,TW-2,'#a98058'); R(c,11*TW+15,(MH-1)*TW+2,2,TW-2,'#634631');
-  R(c,10*TW+8,(MH-2)*TW+4,3*TW,TW-6,'#8d969e');
+  for(let y=2;y<MH-1;y++)for(let x=1;x<MW-1;x++){ R(c,x*TW,y*TW,TW,TW,(x+y)%2?'#3b4043':'#404548'); R(c,x*TW,y*TW,TW,1,'#2f3336'); R(c,x*TW,y*TW,1,TW,'#2f3336'); }
+  for(let i=0;i<26;i++){ const x=TW+rnd()*(MW-2)*TW, y=2*TW+rnd()*(MH-3)*TW, r=2+rnd()*5;           // 얼룩
+    disc(c,x,y,r,['rgba(20,24,22,.45)','rgba(58,74,50,.35)','rgba(70,30,30,.3)'][i%3]); }
+  for(let i=0;i<9;i++){ let x=TW+rnd()*(MW-2)*TW, y=2*TW+rnd()*(MH-3)*TW;                              // 바닥 균열
+    for(let k=0;k<10;k++){ R(c,x,y,1,1,'#202326'); x+=rnd()<.5?1:-1+(rnd()*3|0); y+=1; } }
+  R(c,0,0,MW*TW,32,'#23272b'); for(let x=0;x<MW*TW;x+=32) R(c,x,0,1,26,'#1b1e21'); R(c,0,12,MW*TW,1,'#1b1e21');
+  for(let x=0;x<MW*TW;x+=8){ R(c,x,26,4,4,'#7a6620'); R(c,x+4,26,4,4,'#161616'); }                       // 경고 띠
+  [3,8].forEach(tx=>{ box(c,tx*TW,6,22,12,'#2b3034','#363b40','#1e2225'); for(let k=0;k<4;k++) R(c,tx*TW+3,8+k*2,16,1,'#15181a'); }); // 환풍구
+  box(c,16*TW,5,2*TW,16,'#8a7420','#a08a2a','#6a5818','#141414');                                      // 경고 표지판
+  for(let i=0;i<7;i++) R(c,17*TW-i,8+i,1+2*i,1,'#141414'); R(c,17*TW-1,10,2,3,'#8a7420'); R(c,17*TW-1,14,2,1,'#8a7420');
+  R(c,0,0,TW,MH*TW,'#16191c'); R(c,(MW-1)*TW,0,TW,MH*TW,'#16191c'); R(c,0,(MH-1)*TW,MW*TW,TW,'#16191c'); R(c,TW-2,32,2,(MH-3)*TW,'#0f1113'); R(c,(MW-1)*TW,32,2,(MH-3)*TW,'#0f1113');
+  R(c,11*TW,(MH-1)*TW,2*TW,TW,'#3a3f44'); R(c,11*TW+2,(MH-1)*TW+2,2*TW-4,TW-2,'#4a5056'); R(c,11*TW+15,(MH-1)*TW+2,2,TW-2,'#2a2e32');
+  for(let i=0;i<2*TW;i+=2){ R(c,11*TW+i,(MH-1)*TW+4+(i>>1)%12,2,2,'#c9a722'); R(c,11*TW+i,(MH-1)*TW+14-(i>>1)%12,2,2,'#c9a722'); } // 출입 금지 테이프
+  R(c,10*TW+8,(MH-2)*TW+4,3*TW,TW-6,'#2b2f33');
 });
+// 조명: 전체를 어둡게 + 가장자리 비네팅
+const SHADE=mkCanvas(MW*TW,MH*TW,c=>{ c.fillStyle='rgba(6,10,14,.28)'; c.fillRect(0,0,MW*TW,MH*TW);
+  const g=c.createRadialGradient(MW*TW/2,MH*TW/2,60,MW*TW/2,MH*TW/2,MW*TW*.62); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.7)');
+  c.fillStyle=g; c.fillRect(0,0,MW*TW,MH*TW); });
+const LAMPS=[[5*TW+8,10],[18*TW+8,10]];
+function drawLighting(t){ mctx.drawImage(SHADE,0,0);
+  LAMPS.forEach(([x,y],i)=>{ const a=.25+.2*Math.sin(t/600+i*2); const g=mctx.createRadialGradient(x,y,1,x,y,40);
+    g.addColorStop(0,`rgba(255,40,40,${a})`); g.addColorStop(1,'rgba(255,40,40,0)'); mctx.fillStyle=g; mctx.fillRect(x-40,y-40,80,80);
+    mctx.fillStyle='#ff4a4a'; mctx.fillRect(x-2,y-2,4,3); }); }
 
 /* ---------------- 플레이어 ---------------- */
 const PL={x:11.5*TW+8,y:12*TW+8,dir:'up',walk:0,path:null};
@@ -522,7 +548,7 @@ const inv={
 function renderSlot(i,o=1){
   const s=slots[i]; s.innerHTML=''; const id=S.inv[i]; if(!id) return null;
   const img=new Image(); img.src=iconURL(id); img.draggable=false; img.style.opacity=o;
-  img.onclick=e=>{ e.stopPropagation(); if(cineOn) return; const canPlace=!!popupMod&&!busyN&&!popupAnim; select(img,S.inv[i],canPlace?'place':'info'); };
+  img.onclick=e=>{ e.stopPropagation(); if(cineOn) return; select(img,S.inv[i],popupMod?'place':'info'); }; // 가상 팝업창이 열려 있으면 항상 '배치하기'
   s.appendChild(img); return img;
 }
 function renderInv(){ for(let i=0;i<8;i++) renderSlot(i); }
@@ -593,7 +619,7 @@ function updateX(){ const show=FEATURES.closeButton&&popupMod&&!busyN&&!popupAni
   pcloseEl.style.display=show?'flex':'none'; }
 function slide(up){ const a=popupEl.animate([{transform:up?'translateY(100%)':'translateY(0)'},{transform:up?'translateY(0)':'translateY(100%)'}],
   {duration:500/SPEED,easing:up?'cubic-bezier(.2,.8,.3,1)':'cubic-bezier(.6,0,.8,.4)',fill:'forwards'});
-  return a.finished.then(()=>{ popupEl.style.transform=up?'translateY(0)':'translateY(100%)'; a.cancel(); }); }
+  return animDone(a,500/SPEED,()=>{ popupEl.style.transform=up?'translateY(0)':'translateY(100%)'; }); }
 const P={
   q:k=>popupEl.querySelector(`[data-k="${k}"]`),
   clear(){ stageEl.innerHTML=''; actsEl.innerHTML=''; popupEl.querySelectorAll('.box.inpop').forEach(b=>b.remove()); },
@@ -625,7 +651,14 @@ async function closePopup(){
 pcloseEl.onclick=e=>{ e.stopPropagation(); if(pcloseEl.style.display!=='none') closePopup(); };
 async function takeItem(el,id){ sfx('get'); deselect(); el.style.pointerEvents='none'; await fade(el,0,300); el.remove(); await inv.add(id); }
 function placeSelected(id){
-  const mod=popupMod; const fn=(mod&&mod.accept&&!busyN&&!popupAnim)?mod.accept(id):null; deselect();
+  deselect(); placeWhenReady(id);
+}
+// 팝업이 열리는 중이거나 짧은 연출 중이면 끝날 때까지(최대 1.5초) 기다렸다가 배치를 판정한다.
+async function placeWhenReady(id){
+  const sess=popSess;
+  for(let t=0;(busyN||popupAnim)&&t<1500;t+=50) await new Promise(r=>setTimeout(r,50));
+  if(sess!==popSess||!popupMod||busyN||popupAnim||!inv.has(id)) return;
+  const fn=popupMod.accept?popupMod.accept(id):null;
   if(!fn){ sfx('error'); flash('올바른 용도가 아닙니다.',1500); return; }
   run(async()=>{ sfx('place'); await inv.remove(id); await fn(); });
 }
@@ -764,7 +797,7 @@ MODS.fusion={
     await Promise.all([moveTo(c1,46,50,2000),moveTo(c2,54,50,2000)]);
     const fl=document.createElement('div'); fl.className='flashc'; stageEl.appendChild(fl); sfx('flash');
     const a=fl.animate([{opacity:0},{opacity:1,offset:.45},{opacity:1,offset:.55},{opacity:0}],{duration:1000/SPEED});
-    await wait(500); c1.remove(); c2.remove(); const m=P.sprite('cellHybrid',50,50,12,{k:'merged'}); await a.finished.catch(()=>{}); fl.remove();
+    await wait(500); c1.remove(); c2.remove(); const m=P.sprite('cellHybrid',50,50,12,{k:'merged'}); await animDone(a,1000/SPEED,()=>{}); fl.remove();
     stageMsg('융합이 완료되었습니다'); await wait(2000);
     await P.fadeOut(300,eye,m,note); const ill=P.illus('fusion',{o:0}); F.stage='ready'; await P.fadeIn(300,ill,this.hyItem(0)); })); },
   hyItem(o){ return P.item('hybrid',50,52,{o,take:el=>this.take(el)}); },
@@ -896,7 +929,7 @@ MODS.tester={
   well(l){ const X=this.X; if(X.stage!=='graph'||this.anim||busyN||X.checked.includes(l)) return;
     this.anim=true; X.checked.push(l); sfx('tick'); const scr=P.q('screen'), first=X.checked.length===1;
     scr.querySelector(`.well[data-w="${l}"]`).classList.add('done'); fade(scr.querySelector(`[data-i="${l}"]`),1,300);
-    const svgFade=(g,ms)=>{ const a=g.animate([{opacity:0},{opacity:1}],{duration:ms/SPEED,fill:'forwards'}); return a.finished.then(()=>{g.setAttribute('opacity',1);a.cancel();}); };
+    const svgFade=(g,ms)=>{ const a=g.animate([{opacity:0},{opacity:1}],{duration:ms/SPEED,fill:'forwards'}); return animDone(a,ms/SPEED,()=>g.setAttribute('opacity',1)); };
     run(async()=>{
       if(first){ await wait(500); await svgFade(scr.querySelector('.axes'),300); await wait(300); await svgFade(scr.querySelector('.legend'),300); await wait(300); }
       const g=scr.querySelector(`g[data-l="${l}"]`); g.setAttribute('opacity',1);
@@ -1050,8 +1083,9 @@ async function tutHide(){ await fade(tutEl,0,200); tutEl.style.display='none'; T
 async function runTutorial(){
   TUT.lock=true;
   const r=await tut('이곳은 XX과학고등학교의 과학실입니다.',[['skip','튜토리얼 건너뛰기'],['next','다음']]);
-  if(r==='skip'){ await tutHide(); return finishTutorial(true); }
+  if(r==='skip'){ tutHide(); return finishTutorial(true); }
   await tutHide(); hlShow(elRect(worldEl)); await wait(1500);
+  await tut('이곳은 메타버스 영역입니다. 교사 A가 좀비 바이러스를 연구하던 XX과학고등학교의 과학실을 배경으로 만들어진 가상 공간을 보여줍니다.',[['next','다음']]);
   await tut('과학실 내부에는 다양한 재료와 실험 장비들이 갖춰져 있습니다.',[['next','다음']]); hlClear();
   await tut('교사 A가 남긴 연구일지를 읽고 세포 융합 기술을 활용하여 단클론항체 치료제를 만드십시오.',[['next','다음']]);
   await tut(IS_MOBILE?'가상 조이패드를 이용하여 이동할 수 있습니다.':'방향키나 WASD, 또는 마우스 클릭으로 이동할 수 있습니다.',[['next','다음']]);
@@ -1067,13 +1101,19 @@ async function tutIncubator(){
 }
 async function tutAfterTake(){
   TUT.lock=true; hlClear(); stageMsg(null); await wait(300); await closePopup(); await wait(2000);
-  hlShow(elRect(invEl)); await tut('이곳에서 당신이 가지고 있는 물건을 확인할 수 있습니다.',[['next','다음']]);
+  hlShow(elRect(invEl)); await tut('이곳은 인벤토리 영역입니다.',[['next','다음']]);
+  await tut('이곳에서 당신이 가지고 있는 물건을 확인할 수 있습니다.',[['next','다음']]);
   await tut("물건을 배치해야 할 때에는 인벤토리에서 물건을 클릭한 뒤 '배치하기' 버튼을 누르면 됩니다.",[['next','다음']]);
   await tutHide(); hlShow(objRect('fusion')); stageMsg('어떤 사물은 정해진 물건을 인벤토리에 가지고 있을 때에만 상호작용할 수 있습니다');
   await wait(2000); stageMsg(null); hlClear();
-  await tut('교사 A가 남긴 연구 일지를 읽고 순서에 맞게 치료제를 개발하십시오',[['ok','확인']]); await tutHide(); finishTutorial(false);
+  await tut('교사 A가 남긴 연구 일지를 읽고 순서에 맞게 치료제를 개발하십시오',[['ok','튜토리얼 종료']]); tutHide(); finishTutorial(false);
 }
-function finishTutorial(skipped){ S.phase='dev'; S.skipped=skipped; TUT.lock=false; TUT.waitInc=false; hlClear(); save(); }
+function finishTutorial(skipped){ S.phase='dev'; S.skipped=skipped; TUT.lock=false; TUT.waitInc=false; hlClear(); save(); phaseToDev(); }
+
+/* ---------------- 단계 표시 (왼쪽 위) ---------------- */
+const phaseEl=$('#phase');
+function setPhaseLabel(){ phaseEl.textContent=S.phase==='tutorial'?'튜토리얼 단계':'치료제 개발 단계'; phaseEl.style.opacity=1; }
+async function phaseToDev(){ await fade(phaseEl,0,300); await wait(300); phaseEl.textContent='치료제 개발 단계'; await fade(phaseEl,1,500); }
 
 /* ---------------- 입력·이동 ---------------- */
 let lockN=0;
@@ -1150,7 +1190,7 @@ function frame(t){
   const list=SPRITES.map(s=>({b:s.base,draw:()=>mctx.drawImage(s.cv,s.x,s.y)}));
   list.push({b:PL.y+3,draw:()=>{ mctx.fillStyle='rgba(0,0,0,.25)'; mctx.fillRect(Math.round(PL.x)-5,Math.round(PL.y)+1,10,3);
     mctx.drawImage(playerSprite(PL.dir,Math.floor(PL.walk)%2),Math.round(PL.x)-6,Math.round(PL.y)-15); }});
-  list.sort((a,b)=>a.b-b.b).forEach(o=>o.draw());
+  list.sort((a,b)=>a.b-b.b).forEach(o=>o.draw()); drawLighting(t);
   updateNear(); hlTrack();
   requestAnimationFrame(frame);
 }
@@ -1179,7 +1219,7 @@ function applyState(ns){
   popSess++; popupMod=null; popupAnim=false; busyN=0; lockN=0; popupEl.style.display='none'; popupEl.style.transform='translateY(100%)'; P.clear();
   document.querySelectorAll('.box').forEach(b=>b.remove()); boxN=0; tutEl.style.display='none'; tutEl.style.opacity=0; TUT.lock=TUT.box=TUT.waitInc=TUT.canTake=false;
   cineOn=false; cineEl.style.display='none'; cineEl.innerHTML=''; hlClear(); deselect(); M.stage=null; M.flash=null;
-  const keepMute=S.muted; S=ns; S.muted=keepMute; for(const k in ICACHE) delete ICACHE[k]; renderInv(); msgUpdate(); updateX(); save();
+  const keepMute=S.muted; S=ns; S.muted=keepMute; for(const k in ICACHE) delete ICACHE[k]; renderInv(); setPhaseLabel(); msgUpdate(); updateX(); save();
 }
 function toggleDebug(){ DBG.on=!DBG.on; const d=$('#dbg'); if(!DBG.on){ d.style.display='none'; SPEED=1; return; } buildDebug(); d.style.display='block'; }
 function buildDebug(){ const d=$('#dbg');
@@ -1207,7 +1247,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden) save(); }
 function start(){
   layout(); const sv=loadSave();
   if(sv&&sv.phase!=='tutorial'){ S=Object.assign(freshState(),sv); if(S.player){ PL.x=S.player.x; PL.y=S.player.y; PL.dir=S.player.dir||'up'; } }
-  renderInv(); msgUpdate(); requestAnimationFrame(frame);
+  renderInv(); setPhaseLabel(); msgUpdate(); requestAnimationFrame(frame);
   if(S.phase==='tutorial') runTutorial();
   else if(S.flags.finished) showEnd(true);
   else if(S.flags.treatmentZDone) ending2Prompt();
