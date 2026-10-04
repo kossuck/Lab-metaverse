@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css">
 <style>
 :root{
-  --inv-h:80pt; --inv-bg:#3a3a3a; --popup-bg:rgba(18,18,18,.9); --slot-fill:#161616; --slot-line:#ffffff;
+  --inv-h:80pt; --inv-bg:#2c2c2c; --popup-bg:rgba(18,18,18,.9); --slot-fill:#161616; --slot-line:#ffffff;
   --desc-bg:rgba(0,0,0,.8); --select:#ffd400; --pad:rgba(58,58,58,.55); --txt:#f2f2f2;
   --font:'Galmuri11','Galmuri9','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
   --btn-min:0px; --msg-size:15pt;
@@ -44,13 +44,16 @@ body.mobile #pad{display:grid}
 /* 가상 팝업창 */
 #popup{position:absolute;inset:0;background:var(--popup-bg);display:none;flex-direction:column;align-items:center;justify-content:center;
   z-index:20;container-type:size;transform:translateY(100%);padding-top:calc(var(--msg-size)*1.45 + 30px)}
-.pp-stage{position:relative;width:min(92cqw,calc((100cqh - 96px)*1.6));aspect-ratio:16/10}
+.pp-stage{position:relative;width:min(92cqw,calc((100cqh - 120px)*1.6));aspect-ratio:16/10}
+.pp-disc{font-size:11px;color:rgba(255,255,255,.45);text-align:center;padding:2px 16px 0;min-height:16px;line-height:1.4;max-width:760px}
 .pp-stage .ill{position:absolute;inset:0;width:100%;height:100%}
 .pp-actions{min-height:64px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding-top:8px}
 .pp-note{font-size:12px;color:#bbb}
 #pclose{position:absolute;top:10px;right:12px;width:36px;height:36px;min-width:var(--btn-min);min-height:var(--btn-min);display:none;
   align-items:center;justify-content:center;background:transparent;border:2px solid #fff;color:#fff;font-size:18px;cursor:pointer;z-index:3}
-.pitem,.psprite{position:absolute;transform:translate(-50%,-50%);aspect-ratio:1}
+/* will-change: 페이드 시작·끝마다 레이어가 바뀌며 아이콘이 1px씩 움찔거리던 현상 방지 */
+.pitem,.psprite{position:absolute;transform:translate(-50%,-50%);aspect-ratio:1;will-change:transform,opacity;backface-visibility:hidden}
+.pp-stage .ill{will-change:opacity}
 .pitem img,.psprite img{width:100%;height:100%;display:block}
 .pitem.clickable{cursor:pointer}
 .pitem{outline:2px solid transparent;outline-offset:1px;transition:outline-color .3s}
@@ -152,6 +155,7 @@ body.a11y #phase{min-height:var(--btn-min);display:flex;align-items:center}
     <button id="pclose" aria-label="닫기">✕</button>
     <div class="pp-stage" id="stage"></div>
     <div class="pp-actions" id="acts"></div>
+    <div class="pp-disc" id="pdisc"></div>
   </div>
   <div id="cine"></div>
   <button id="restart">↺ 처음부터</button>
@@ -423,93 +427,182 @@ const ILLS={incOpen:'incOpen',incClosed:'incClosed'};
 
 /* ---------------- 맵 ---------------- */
 const TW=16, MW=24, MH=14;
+// 맵 사물 그림 — 모두 실제 크기(픽셀) 그대로 그린다. (c, w, h) = 캔버스, 그림 폭, 그림 높이
+let _s2=11; const rnd2=()=>{ _s2=(_s2*16807)%2147483647; return _s2/2147483647; };
+const LIQ=['#5aa94a','#c05050','#4a8fd6','#d9a640','#9a6ad0','#4fc0b0'];
+// 선반 한 칸 채우기: yb = 선반 윗면(물건 바닥), maxH = 물건 최대 높이
+// empty = true 이면 액체 없이 빈 유리 기구만 그린다
+function shelfRow(c,x0,x1,yb,maxH,empty){
+  let x=x0;
+  while(x<x1-2){ const t=rnd2(), col=empty?'#8fa6b0':LIQ[(rnd2()*LIQ.length)|0];
+    if(t<.3&&maxH>=6){ const h=Math.min(maxH,5+((rnd2()*4)|0)); R(c,x,yb-h,2,h,'#8fa6b0'); R(c,x,yb-((h*.55)|0),2,(h*.55)|0,col); R(c,x,yb-h,2,1,'#c9d6dc'); x+=3; }       // 실린더
+    else if(t<.55&&maxH>=6&&x<x1-5){ R(c,x+1,yb-6,2,2,'#8fa6b0'); R(c,x,yb-4,4,4,'#8fa6b0'); R(c,x,yb-2,4,2,col); x+=5; }                                  // 플라스크
+    else if(t<.8&&x<x1-4){ const n=1+((rnd2()*Math.min(3,maxH/2))|0); for(let k=0;k<n;k++){ R(c,x,yb-2-k*2,4,2,'#c9d6dc'); R(c,x,yb-1-k*2,4,1,'#8fa6b0'); } x+=5; } // 페트리 접시 더미
+    else if(x<x1-3){ R(c,x,yb-4,3,4,'#8fa6b0'); R(c,x,yb-2,3,2,col); x+=4; }                                                                                // 비커
+    else x++;
+  }
+}
 const OBJ_DRAW={
-  cage(c){ box(c,1,16,46,16,'#8a6544','#a98058','#634631'); R(c,23,18,1,12,'#634631'); R(c,19,22,2,2,'#c9a36a'); R(c,27,22,2,2,'#c9a36a');
-    box(c,4,3,40,14,'#30353b'); R(c,5,11,38,5,'#7b8794'); R(c,6,10,36,2,'#d8c49a'); for(let x=6;x<43;x+=3) R(c,x,4,1,7,'#aab3ba'); R(c,5,3,38,2,'#c9d0d6');
-    R(c,12,8,5,3,'#f7f7f7'); R(c,16,8,1,1,'#d23a3a'); R(c,28,8,5,3,'#f7f7f7'); R(c,32,8,1,1,'#d23a3a'); R(c,39,4,3,7,'#9cc9da'); },
-  incubator(c){ box(c,2,2,28,45,MC.m3,MC.w,MC.m1); R(c,4,4,24,6,MC.m1); R(c,6,5,10,4,'#16221a'); R(c,7,6,2,2,'#62e07a');R(c,10,6,2,2,'#62e07a');R(c,13,6,2,2,'#62e07a');
-    R(c,22,6,2,2,'#d94a4a'); box(c,4,12,24,32,MC.m2,MC.m3,MC.m1); box(c,7,15,14,16,'#2b3035'); R(c,8,16,12,1,'#7fa9b8'); R(c,8,22,12,1,MC.m1); R(c,8,27,12,1,MC.m1);
-    R(c,24,22,2,10,MC.m0); R(c,4,46,4,2,MC.o); R(c,24,46,4,2,MC.o); },
-  hazard(c){ box(c,3,2,26,45,'#7f8a80','#9aa59a','#5e675e'); for(let i=0;i<4;i++) R(c,7,6+i*2,18,1,'#5e675e');
-    for(let i=0;i<7;i++) R(c,16-i,16+i,1+2*i,1,'#f2c230'); R(c,15,18,2,3,'#111'); R(c,15,22,2,1,'#111');
-    for(let x=4;x<28;x+=4){ R(c,x,38,2,7,'#f2c230'); R(c,x+2,38,2,7,'#222'); } R(c,24,25,2,7,MC.m3); },
-  fusion(c){ box(c,2,30,28,16,MC.m1,MC.m2,MC.m0); R(c,4,46,3,2,'#111'); R(c,25,46,3,2,'#111'); box(c,8,24,16,7,MC.m2,MC.w);
-    R(c,14,8,4,16,MC.m0); R(c,13,4,6,5,'#333'); R(c,10,20,12,2,'#333'); R(c,13,18,6,2,MC.gl);
-    for(let i=0;i<9;i++){ R(c,4+i,9+i,2,2,MC.m3); R(c,26-i,9+i,2,2,MC.m3); } box(c,1,5,5,6,MC.m1); box(c,26,5,5,6,MC.m1); },
-  table(c){ box(c,3,19,58,12,MC.m3,MC.w,MC.m1); R(c,22,20,1,10,MC.m1); R(c,42,20,1,10,MC.m1); R(c,12,24,4,1,MC.m0); R(c,31,24,4,1,MC.m0); R(c,50,24,4,1,MC.m0);
-    box(c,1,6,62,14,'#2b2f33','#3c4248','#1f2326'); box(c,6,2,11,6,MC.m2); ['#e06666','#66aaee','#66dd66','#eecc66'].forEach((col,i)=>{R(c,7+i*2,0,1,5,col);});
-    R(c,46,3,6,6,MC.gl); R(c,48,0,2,3,MC.gl); R(c,47,6,4,2,'#c58bd6'); R(c,28,9,10,7,'#f0ede0'); R(c,30,11,6,1,'#aaa48f'); R(c,30,13,6,1,'#aaa48f'); },
-  microscope(c){ box(c,1,26,30,21,'#8a6544','#a98058','#634631'); R(c,1,26,30,3,'#2b2f33');
-    box(c,9,21,14,5,MC.w); box(c,18,8,5,15,MC.m3); box(c,11,4,8,5,MC.m3); R(c,13,0,3,5,'#333'); R(c,12,10,4,6,'#555'); R(c,8,16,14,2,'#333'); R(c,22,14,3,3,'#555'); },
-  editor(c){ box(c,2,6,28,41,MC.m3,MC.w,MC.m1); box(c,5,9,22,12,'#0f1c22');
-    for(let x=0;x<20;x++){ const y=Math.round(2.5*Math.sin(x/2)); R(c,6+x,14+y,1,1,'#4fe0c0'); R(c,6+x,14-y,1,1,'#e07ad0'); }
-    box(c,9,25,14,12,'#2c3238'); R(c,11,27,10,8,MC.glD); R(c,6,40,3,2,'#d94a4a'); R(c,11,40,3,2,'#58b85a'); R(c,16,40,3,2,'#f2c230'); },
-  tester(c){ box(c,1,26,30,21,MC.m2,MC.m3,MC.m1); R(c,4,30,24,1,MC.m1); box(c,5,6,22,15,'#222'); R(c,7,8,18,11,'#1d3550');
-    R(c,9,14,2,4,'#e04545'); R(c,11,16,2,2,'#4573e0'); R(c,15,11,2,7,'#e04545'); R(c,17,17,2,1,'#4573e0'); R(c,21,13,2,5,'#e04545'); R(c,23,15,2,3,'#4573e0');
-    R(c,15,21,2,4,'#333'); R(c,12,24,8,2,'#333'); R(c,8,27,12,2,'#555'); },
-  producer(c){ box(c,10,8,28,39,MC.m3,MC.w,MC.m1); box(c,1,12,9,30,MC.glD); R(c,2,22,7,19,'#4b8fd6'); box(c,38,12,9,30,MC.glD); R(c,39,26,7,15,'#6bb6e8');
-    R(c,9,16,2,2,MC.m0); R(c,37,16,2,2,MC.m0); box(c,16,20,16,14,'#20262b'); R(c,20,24,8,6,'#7fd0ff'); box(c,14,11,20,6,'#102018'); R(c,16,13,10,2,'#4fd06b');
-    R(c,12,46,4,2,MC.o); R(c,32,46,4,2,MC.o); },
-  shelf(c){ box(c,1,1,30,30,'#8a6544','#a98058','#634631'); R(c,2,11,28,1,'#634631'); R(c,2,21,28,1,'#634631');
-    [[4,5,3,6,'#7ab'],[8,6,3,5,'#d86'],[12,4,2,7,'#6c6'],[16,6,4,5,'#eee'],[22,5,3,6,'#a7d'],[4,15,4,6,'#ddd'],[10,16,3,5,'#e66'],[15,14,3,7,'#7ab'],[20,16,6,5,'#cb8'],
-     [4,25,6,5,'#bbb'],[12,24,3,6,'#6ae'],[18,25,8,5,'#998']].forEach(([x,y,w,h,col])=>R(c,x,y,w,h,col)); },
-  bench(c){ box(c,1,14,30,17,MC.m3,MC.w,MC.m1); R(c,1,12,30,4,'#2b2f33'); R(c,15,17,1,12,MC.m1); R(c,6,0+6,4,6,MC.gl); R(c,7,9,2,3,'#66dd66'); R(c,18,5,6,7,MC.gl); R(c,19,8,4,4,'#eecc66'); R(c,20,2,2,3,MC.gl); },
-  sink(c){ box(c,1,12,30,19,MC.m3,MC.w,MC.m1); R(c,1,12,30,3,'#2b2f33'); R(c,6,13,20,4,'#7d8b95'); R(c,15,4,2,9,MC.m1); R(c,15,4,6,2,MC.m1); R(c,10,20,12,8,MC.m2); },
-  plant(c){ box(c,3,20,10,11,'#b5653d','#cf7d52','#8c4a2a'); disc(c,8,14,5,'#2f7d3a'); disc(c,5,10,3.5,'#3b9a48'); disc(c,11,9,3.5,'#3b9a48'); disc(c,8,6,3,'#4cb35a'); },
-  locker(c){ box(c,1,2,30,45,'#6f7f92','#8595a8','#55637a'); R(c,15,3,2,43,'#55637a'); for(let i=0;i<3;i++){ R(c,4,8+i*2,9,1,'#55637a'); R(c,19,8+i*2,9,1,'#55637a'); }
-    R(c,11,24,2,5,MC.m3); R(c,19,24,2,5,MC.m3); },
-  stool(c){ disc(c,8,6,5,'#121416'); disc(c,8,6,4,'#5f676f'); R(c,5,9,1,6,'#333'); R(c,10,9,1,6,'#333'); },
-  trash(c){ box(c,3,3,10,12,'#5f676f','#8d969e'); R(c,2,2,12,2,'#3a4046'); R(c,6,6,1,7,'#4a5056'); R(c,9,6,1,7,'#4a5056'); },
+  // ※ 탑뷰(위에서 비스듬히 내려다보는) 시점: 각 사물 위쪽에 '윗면'(밝은 면)을, 그 아래에 '앞면'(조금 어두운 면)을 그린다.
+  cage(c){ // 철망 뚜껑 윗면 → 사육장 앞면 → 받침 선반 윗면·앞면
+    box(c,4,0,40,7,'#aab2b9','#c3c9ce','#8d969e'); for(let x=7;x<42;x+=3) R(c,x,1,1,5,'#7f878f'); R(c,5,3,38,1,'#7f878f');
+    R(c,36,1,4,5,'#9cc9da'); R(c,37,1,2,1,'#d6eef5');                                                     // 뚜껑 위 물병
+    box(c,4,6,40,13,'#30353b'); R(c,5,13,38,4,'#d8c49a'); R(c,5,16,38,2,'#7b8794'); for(let x=6;x<43;x+=3) R(c,x,7,1,7,'#aab3ba');
+    R(c,12,10,5,3,'#f7f7f7'); R(c,16,10,1,1,'#d23a3a'); R(c,28,10,5,3,'#f7f7f7'); R(c,32,10,1,1,'#d23a3a');
+    box(c,1,18,46,4,'#4a5056','#5c636a','#3a3f44');                                                         // 받침 윗면
+    box(c,1,21,46,11,'#3a3f44','#4a5056','#2b2f33'); R(c,23,22,1,9,'#2b2f33'); R(c,19,25,2,2,'#6b737b'); R(c,27,25,2,2,'#6b737b'); },
+  table(c){ box(c,2,15,48,11,'#8d969e','#a3abb2','#6b737b'); R(c,18,16,1,9,'#5f676f'); R(c,34,16,1,9,'#5f676f'); R(c,8,20,4,1,'#4a5056'); R(c,24,20,4,1,'#4a5056'); R(c,40,20,4,1,'#4a5056');
+    box(c,0,4,52,12,'#2b2f33','#3c4248','#1f2326'); box(c,4,1,10,6,MC.m2); ['#e06666','#66aaee','#66dd66','#eecc66'].forEach((col,i)=>{R(c,5+i*2,0,1,4,col);});
+    R(c,38,2,5,5,MC.gl); R(c,39,0,3,2,MC.gl); R(c,39,5,3,1,'#c58bd6'); R(c,22,7,9,6,'#f0ede0'); R(c,24,9,5,1,'#aaa48f'); R(c,24,11,5,1,'#aaa48f'); },
+  incubator(c){
+    box(c,1,0,24,7,'#c0c7cd','#d3d9de','#9aa2a9'); R(c,4,2,12,1,'#9aa2a9'); R(c,4,4,12,1,'#9aa2a9');            // 윗면 + 환기구
+    box(c,1,6,24,31,'#aab2b9','#bcc3c9','#7f878f');                                                         // 앞면
+    R(c,3,8,9,4,'#16221a'); R(c,4,9,2,2,'#62e07a'); R(c,7,9,2,2,'#62e07a'); R(c,10,9,1,2,'#62e07a'); R(c,19,9,2,2,'#d94a4a');
+    box(c,3,13,20,22,'#9ba3aa','#b0b8bf','#737b83'); box(c,5,15,11,13,'#2b3035'); R(c,6,16,9,1,'#7fa9b8'); R(c,6,20,9,1,MC.m1); R(c,6,24,9,1,MC.m1);
+    R(c,19,20,2,8,MC.m0); R(c,3,37,3,1,MC.o); R(c,20,37,3,1,MC.o); },
+  hazard(c){
+    box(c,2,0,22,6,'#929d92','#a6b0a6','#6e776e'); R(c,5,2,16,1,'#6e776e');                                 // 윗면
+    box(c,2,5,22,32,'#7a857b','#909b90','#5a635a'); for(let i=0;i<3;i++) R(c,5,8+i*2,15,1,'#5a635a');       // 앞면
+    for(let i=0;i<6;i++) R(c,13-i,15+i,1+2*i,1,'#f2c230'); R(c,12,17,2,2,'#111'); R(c,12,20,2,1,'#111');
+    for(let x=3;x<23;x+=4){ R(c,x,30,2,6,'#f2c230'); R(c,x+2,30,2,6,'#222'); } R(c,20,22,2,6,MC.m3); },
+  editor(c){
+    box(c,1,2,24,7,'#c0c7cd','#d3d9de','#9aa2a9'); R(c,4,4,8,1,'#9aa2a9'); box(c,15,3,7,4,'#aab2b9');        // 윗면 + 덮개
+    box(c,1,8,24,29,'#aab2b9','#bcc3c9','#7f878f'); box(c,3,10,20,9,'#0f1c22');                              // 앞면 + 화면
+    for(let x=0;x<18;x++){ const y=Math.round(2*Math.sin(x/2)); R(c,4+x,14+y,1,1,'#4fe0c0'); R(c,4+x,14-y,1,1,'#e07ad0'); }
+    box(c,7,21,12,9,'#2c3238'); R(c,9,23,8,5,MC.glD); R(c,12,19,2,3,MC.m0); R(c,4,32,3,2,'#d94a4a'); R(c,9,32,3,2,'#58b85a'); R(c,14,32,3,2,'#f2c230'); },
+  producer(c){
+    const tank=(x,lv)=>{ box(c,x,9,7,24,MC.glD); R(c,x+1,lv,5,32-lv,'#4b8fd6'); R(c,x+1,6,5,1,'#a9c6d2'); R(c,x,7,7,2,'#8fb3c2'); R(c,x+1,9,5,1,'#6f97a8'); };
+    tank(1,16); tank(30,21); R(c,3,20,1,1,'#9fd0ff'); R(c,7,13,2,2,MC.m0); R(c,29,13,2,2,MC.m0);           // 원통형 탱크(윗면 타원)
+    box(c,8,1,22,7,'#bcc3c9','#cdd3d8','#9aa2a9'); R(c,11,3,6,2,'#9aa2a9'); R(c,21,3,6,2,'#9aa2a9');         // 본체 윗면
+    box(c,8,7,22,30,'#a3abb2','#b5bcc2','#7f878f'); box(c,11,9,16,5,'#102018'); R(c,13,11,8,1,'#4fd06b');     // 본체 앞면
+    box(c,13,16,12,10,'#20262b'); R(c,16,18,6,5,'#7fd0ff');
+    R(c,12,29,3,2,'#d94a4a'); R(c,17,29,3,2,'#58b85a'); R(c,22,29,3,2,'#f2c230'); R(c,10,37,3,1,MC.o); R(c,25,37,3,1,MC.o); },
+  fusion(c){
+    box(c,1,18,20,5,'#a3abb2','#b8c0c7','#8d969e');                                                          // 카트 윗면
+    box(c,1,22,20,11,MC.m1,MC.m2,MC.m0); R(c,3,33,2,1,'#111'); R(c,17,33,2,1,'#111');                      // 카트 앞면
+    box(c,6,15,10,5,MC.m2,MC.w); R(c,10,5,3,11,MC.m0); R(c,11,5,1,11,'#7a838b');                             // 받침·기둥
+    R(c,9,2,5,4,'#333'); R(c,10,1,3,1,'#555'); R(c,7,12,8,2,'#333'); R(c,7,12,8,1,'#555'); R(c,9,11,4,1,MC.gl);
+    for(let i=0;i<6;i++){ R(c,3+i,7+i,2,1,MC.m3); R(c,17-i,7+i,2,1,MC.m3); }
+    box(c,0,4,4,5,MC.m1); R(c,0,3,4,2,MC.m3); box(c,18,4,4,5,MC.m1); R(c,18,3,4,2,MC.m3); },                  // 노즐 홀더(윗면)
+  microscope(c){
+    box(c,0,15,22,7,'#4a5056','#5c636a','#3a3f44');                                                         // 작업대 윗면
+    box(c,0,21,22,12,'#3a3f44','#4a5056','#2b2f33');                                                        // 작업대 앞면
+    box(c,6,13,10,5,MC.w); R(c,7,13,8,1,'#ffffff'); R(c,12,3,3,11,MC.m3); R(c,14,3,1,11,MC.m1);
+    R(c,7,1,7,4,MC.m3); R(c,7,1,7,1,MC.w); R(c,9,0,2,2,'#333'); R(c,8,6,3,3,'#555'); R(c,5,9,10,2,'#333'); R(c,5,9,10,1,'#555'); R(c,15,8,2,2,'#555'); },
+  // 항원-항체 반응 검사기 42×38: 왼쪽 항체 추출기(5층) / 가운데 책상+모니터 / 오른쪽 항원 입력기(2칸)
+  //   몸체는 어둡고 채도 낮게, 색이 들어간 부분(보라·빨강·파랑·초록·노랑)은 살짝 밝게
+  tester(c){ const g='#7a8187', gl='#8c9399', gd='#5a6066', top='#959ca2';
+    box(c,0,0,13,5,top,'#a6acb1',gd); R(c,3,2,7,1,gd);                                                     // 추출기 윗면
+    box(c,0,4,13,33,g,gl,gd);
+    for(let i=0;i<5;i++){ const y=6+i*6; box(c,2,y,9,5,'#1e2226'); R(c,3,y+1,1,3,gd); R(c,9,y+1,1,3,gd); R(c,5,y+2,3,2,'#b593c2'); }
+    box(c,14,5,15,12,'#1c1e20'); R(c,15,6,13,10,'#253b52');                                                 // 모니터
+    R(c,16,12,1,3,'#cc5c5c'); R(c,17,13,1,2,'#5f7cc4'); R(c,20,9,1,6,'#cc5c5c'); R(c,21,14,1,1,'#5f7cc4'); R(c,24,10,1,5,'#cc5c5c'); R(c,25,13,1,2,'#5f7cc4');
+    R(c,20,17,2,3,'#2b2e31');
+    box(c,13,19,17,6,top,'#a6acb1','#80878d'); R(c,16,21,11,2,'#4a4f54');                                   // 책상 윗면 + 키보드
+    box(c,13,24,17,13,'#80878d','#91989e',gd); R(c,14,29,15,1,gd);                                         // 책상 앞면
+    box(c,30,8,12,5,top,'#a6acb1',gd); R(c,31,10,10,1,gd);                                                 // 입력기 윗면
+    box(c,30,12,12,25,g,gl,gd); R(c,31,14,10,2,'#a7adb2'); box(c,31,17,5,7,'#1e2226'); box(c,36,17,5,7,'#1e2226');
+    R(c,32,20,3,2,'#7ec070'); R(c,37,20,3,2,'#d6a89e'); R(c,32,28,2,1,'#62c070'); R(c,35,28,2,1,'#d2b64e'); R(c,38,28,2,1,'#cc4e4e'); },
+  // 의자 15×18 (이전의 1.5배)
+  chair(c){ box(c,1,1,13,8,'#3a3f44','#4a5056'); box(c,1,8,13,7,'#2b2f33','#4a5056'); R(c,3,15,2,3,'#151719'); R(c,10,15,2,3,'#151719'); },
+  // 철제 선반 (어두운 회색): 맨 위 윗면 + 정면에 실험 용품이 가득
+  shelfWide(c,w,h){ box(c,0,0,w,6,'#3a4046','#4a5056','#2b2f33'); for(let x=6;x<w-4;x+=10) R(c,x,2,1,1,'#5c636a');
+    R(c,0,6,w,h-6,'#1f2327'); const lv=[6,18,30,h-3];
+    for(let i=1;i<lv.length;i++) shelfRow(c,3,w-3,lv[i],lv[i]-lv[i-1]-2);
+    lv.forEach(y=>{ R(c,0,y,w,2,'#4a5056'); R(c,0,y,w,1,'#5c636a'); }); R(c,0,6,2,h-6,'#2e3338'); R(c,w-2,6,2,h-6,'#2e3338'); },
+  // 세로로 놓인 철제 선반: 위에서는 막힌 윗면이 길게 보이고, 아래쪽 끝면에만 선반과 물건이 보인다
+  shelfSide(c,w,h,o){ const L=o.h, H=o.top;
+    box(c,0,0,w,L,'#2e3338','#3a4046','#22262a','#15181a');
+    for(let y=4;y<L-2;y+=8){ R(c,2,y,1,1,'#4a5056'); R(c,w-3,y,1,1,'#4a5056'); }
+    if(o.split){ R(c,0,(L>>1)-1,w,2,'#15181a'); R(c,0,(L>>1)+1,w,1,'#3a4046'); }   // 선반 2개가 이어진 경계
+    R(c,0,L,w,H,'#1f2327'); const lv=[L+1,L+11,L+21,L+H-2];
+    for(let i=1;i<lv.length;i++) shelfRow(c,2,w-2,lv[i],lv[i]-lv[i-1]-2,o.empty);
+    lv.forEach(y=>{ R(c,0,y,w,2,'#4a5056'); R(c,0,y,w,1,'#5c636a'); }); R(c,0,L,1,H,'#2e3338'); R(c,w-1,L,1,H,'#2e3338'); },
+  // 흄 후드 2대가 올라간 세로 테이블
+  //   o.h = 테이블 길이(발판), o.top = 테이블 높이 + 후드 높이
+  hoodTable(c,w,h,o){ const L=o.h, tH=7, hg=o.top-tH, ts=o.top-tH;   // ts = 테이블 윗면 시작 y
+    box(c,0,ts,w,L,'#2b2f33','#3c4248','#1f2326'); box(c,0,ts+L,w,tH,MC.m2,MC.m3,MC.m1); R(c,(w>>1)-1,ts+L+1,2,tH-2,MC.m1);
+    const gap=8, dep=(L-4-gap)>>1;
+    const hood=ty=>{ const x0=2, hw=w-4, t=ty-hg;
+      box(c,x0,t,hw,dep,'#8d969e','#aab3ba','#6b737b'); disc(c,x0+hw/2,t+dep/2,4,'#4a5056'); disc(c,x0+hw/2,t+dep/2,2.4,'#2b2f33');
+      for(let k=0;k<3;k++) R(c,x0+3,t+3+k*3,5,1,'#6b737b');
+      const f=t+dep; box(c,x0,f,hw,hg,'#b8c0c7','#d0d6db','#8d969e'); box(c,x0+3,f+2,hw-6,hg-5,'#2b3640'); R(c,x0+4,f+3,hw-8,1,'#3f5563');
+      R(c,x0+7,f+hg-6,2,3,'#7d9aa6'); R(c,x0+7,f+hg-5,2,2,'#5aa94a'); R(c,x0+12,f+hg-5,3,2,'#7d9aa6'); R(c,x0+12,f+hg-4,3,1,'#c05050');
+      R(c,x0+3,f+hg-3,hw-6,1,'#6b737b'); R(c,x0+hw-5,f+hg-2,2,1,'#62e07a'); R(c,x0+hw-9,f+hg-2,2,1,'#f2c230'); };
+    hood(ts+2); hood(ts+2+dep+gap); },
+  // 윗면이 빈 테이블 (싱크대와 같은 크기·같은 상판)
+  plainTable(c,w,h){ box(c,0,0,w,h,'#2b2f33','#3c4248','#1f2326'); R(c,0,h-3,w,3,'#1a1d20'); }, // 실험 테이블 윗면과 같은 색
+  // 긴 실험실 싱크대 (아래쪽 벽에 붙음, 위에서 본 상판)
+  sink(c,w,h){ box(c,0,0,w,h,'#4a5056','#5c636a','#363b40'); R(c,0,h-3,w,3,'#2b2f33');
+    [[6,30],[w-36,30]].forEach(([x,bw])=>{ box(c,x,4,bw,h-10,'#22262a'); R(c,x+2,6,bw-4,h-14,'#323b42'); R(c,x+bw/2-1,(h-6)/2+1,2,2,'#0e1012');
+      R(c,x+bw/2-1,h-6,2,4,MC.m1); R(c,x+bw/2-2,h-8,4,2,MC.m2); });
+    R(c,w/2-4,6,3,5,'#7d9aa6'); R(c,w/2-4,6,3,1,'#c05050'); R(c,w/2+1,8,4,3,'#c9d6dc'); },
 };
-// 상호작용 사물 (x,y,w,h = 타일 위치·크기 / top = 위로 더 그려지는 높이)
+// 상호작용 사물 — 모두 픽셀 단위
+//  x,y = 바닥에 닿는 부분(발판)의 왼쪽 위 / w,h = 발판 크기 / top = 발판 위로 더 그려지는 높이
+//  위쪽 줄 사물(사육장·생산기·편집기·배양기·보관함)은 발판 아래 변을 TOP_LINE에 맞춘다.
+const TOP_LINE=58;
 const OBJECTS=[
-  {id:'cage',name:'실험용 쥐 사육장',x:2,y:2,w:3,h:2,top:0},
-  {id:'incubator',name:'세포 배양기',x:10,y:2,w:2,h:2,top:1},
-  {id:'hazard',name:'생물학적 위해물질 보관함',x:19,y:2,w:2,h:2,top:1},
-  {id:'fusion',name:'세포 융합기',x:2,y:6,w:2,h:2,top:1},
-  {id:'table',name:'실험 테이블',x:10,y:6,w:4,h:2,top:0},
-  {id:'microscope',name:'현미경',x:19,y:6,w:2,h:2,top:1},
-  {id:'editor',name:'유전자 편집기',x:2,y:10,w:2,h:2,top:1},
-  {id:'tester',name:'항원 - 항체 반응 검사기',x:8,y:10,w:2,h:2,top:1},
-  {id:'producer',name:'단클론항체 치료제 생산기',x:15,y:10,w:3,h:2,top:1},
+  {id:'editor',name:'유전자 편집기',x:41,y:TOP_LINE-24,w:26,h:24,top:14},   // 왼쪽 벽 선반(~32)과 흄 후드 위 선반(76~) 사이 가운데
+  {id:'producer',name:'단클론항체 치료제 생산기',x:122,y:TOP_LINE-24,w:38,h:24,top:14},
+  {id:'cage',name:'실험용 쥐 사육장',x:168,y:TOP_LINE-32,w:48,h:32,top:0},
+  {id:'incubator',name:'세포 배양기',x:316,y:TOP_LINE-24,w:26,h:24,top:14},
+  {id:'hazard',name:'생물학적 위해물질 보관함',x:342,y:TOP_LINE-24,w:26,h:24,top:14},
+  // 검사기(왼쪽)와 실험 테이블(오른쪽)을 맞붙임. 바닥선 128로 통일
+  {id:'tester',name:'항원 - 항체 반응 검사기',x:171,y:110,w:42,h:21,top:17},   // 그림 중심 = 메타버스 맵 정중앙(192,112)
+  {id:'table',name:'실험 테이블',x:248,y:102,w:52,h:26,top:0},   // 검사기와 14px 틈 (플레이어 통과 가능)
+  // 세포 융합기(위)·현미경(아래): 두 그림을 합친 범위의 세로 중심 = 맵 가로 중심선 y=112
+  {id:'fusion',name:'세포 융합기',x:346,y:89,w:22,h:22,top:12},
+  {id:'microscope',name:'현미경',x:346,y:125,w:22,h:22,top:12},
 ];
-// 장식 사물 (동선 구성용)
+// 장식 사물 (상호작용 없음)
 const DECOR=[
-  {d:'shelf',x:6,y:2,w:2,h:1,top:1},{d:'shelf',x:14,y:2,w:2,h:1,top:1},
-  {d:'bench',x:6,y:6,w:2,h:1,top:1},{d:'bench',x:15,y:6,w:2,h:1,top:1},{d:'trash',x:22,y:5,w:1,h:1,top:0},
-  {d:'sink',x:21,y:9,w:2,h:1,top:1},{d:'locker',x:20,y:10,w:2,h:2,top:1},
-  {d:'stool',x:5,y:11,w:1,h:1,top:0},{d:'stool',x:6,y:8,w:1,h:1,top:0},
+  {d:'shelfSide',x:16,y:34,w:16,h:94,top:30,split:true}, // 왼쪽 벽 선반 2개(세로로 이어짐) — 실험 테이블 높이까지
+  // 흄 후드 위 선반 2개: 서로 붙어 있고 흄 후드 가운데(x=92)를 기준으로 좌우 대칭
+  {d:'shelfSide',x:76,y:34,w:16,h:47,top:30},
+  {d:'shelfSide',x:92,y:34,w:16,h:47,top:30,empty:true}, // 오른쪽 선반은 빈 유리 기구
+  {d:'hoodTable',x:74,y:109,w:37,h:65,top:20},           // 두 싱크대 경계 위쪽: 흄 후드 테이블 (85% 크기, 가운데 x≈92 유지)
+  {d:'shelfWide',x:216,y:TOP_LINE-14,w:50,h:14,top:30}, // 사육장 ~ 세포 배양기 사이
+  {d:'shelfWide',x:266,y:TOP_LINE-14,w:50,h:14,top:30},
+  {d:'chair',x:185,y:133,w:15,h:10,top:8},       // 검사기 모니터 앞 의자 (1.5배)
+  {d:'sink',x:16,y:186,w:76,h:22,top:0},         // 출입구 왼쪽 싱크대 2개
+  {d:'sink',x:92,y:186,w:76,h:22,top:0},
+  {d:'plainTable',x:216,y:186,w:76,h:22,top:0},  // 출입구 오른쪽: 싱크대와 같은 크기의 빈 테이블 2개
+  {d:'plainTable',x:292,y:186,w:76,h:22,top:0},
 ];
-const SOLID=[...Array(MH)].map((_,y)=>[...Array(MW)].map((_,x)=>y<2||y===MH-1||x===0||x===MW-1));
-const SPRITES=[];
+// 벽(이동 불가) / 길찾기용 막힌 칸
+const WALL=[...Array(MH)].map((_,y)=>[...Array(MW)].map((_,x)=>y<2||y===MH-1||x===0||x===MW-1));
+const SOLID=WALL.map(r=>r.slice());
+const SPRITES=[], RECTS=[];
 function mkCanvas(w,h,fn){ const cv=document.createElement('canvas'); cv.width=w; cv.height=h; fn(cv.getContext('2d')); return cv; }
-[...OBJECTS.map(o=>({...o,d:o.id,obj:o})),...DECOR].forEach(o=>{
-  for(let y=o.y;y<o.y+o.h;y++)for(let x=o.x;x<o.x+o.w;x++) SOLID[y][x]=true;
-  SPRITES.push({cv:mkCanvas(o.w*TW,(o.h+o.top)*TW,c=>OBJ_DRAW[o.d](c)),x:o.x*TW,y:(o.y-o.top)*TW,base:(o.y+o.h)*TW});
+[...OBJECTS.map(o=>({...o,d:o.id})),...DECOR].forEach(o=>{
+  const fx=o.x, fy=o.y, fw=o.w, fh=o.h, th=o.top;
+  RECTS.push({x:fx,y:fy,w:fw,h:fh}); if(o.id) Object.assign(OBJECTS.find(q=>q.id===o.id),{fx,fy,fw,fh,th});
+  for(let ty=0;ty<MH;ty++)for(let tx=0;tx<MW;tx++) if(tx*TW<fx+fw&&(tx+1)*TW>fx&&ty*TW<fy+fh&&(ty+1)*TW>fy) SOLID[ty][tx]=true;
+  _s2=11+fx*31+fy*17; // 사물마다 고정된 무작위 배치 (다른 사물을 추가해도 선반 물건 배치가 바뀌지 않음)
+  SPRITES.push({cv:mkCanvas(fw,fh+th,c=>OBJ_DRAW[o.d](c,fw,fh+th,o)),x:fx,y:fy-th,w:fw,h:fh+th,base:fy+fh});
 });
 // 어둡고 으스스한 테마 (출입 금지 연구 구역)
 let _seed=7; const rnd=()=>{ _seed=(_seed*16807)%2147483647; return _seed/2147483647; };
 const FLOOR=mkCanvas(MW*TW,MH*TW,c=>{
-  for(let y=2;y<MH-1;y++)for(let x=1;x<MW-1;x++){ R(c,x*TW,y*TW,TW,TW,(x+y)%2?'#3b4043':'#404548'); R(c,x*TW,y*TW,TW,1,'#2f3336'); R(c,x*TW,y*TW,1,TW,'#2f3336'); }
+  for(let y=2;y<MH-1;y++)for(let x=1;x<MW-1;x++){ R(c,x*TW,y*TW,TW,TW,(x+y)%2?'#41464a':'#464b4f'); R(c,x*TW,y*TW,TW,1,'#34383b'); R(c,x*TW,y*TW,1,TW,'#34383b'); }
   for(let i=0;i<26;i++){ const x=TW+rnd()*(MW-2)*TW, y=2*TW+rnd()*(MH-3)*TW, r=2+rnd()*5;           // 얼룩
     disc(c,x,y,r,['rgba(20,24,22,.45)','rgba(58,74,50,.35)','rgba(70,30,30,.3)'][i%3]); }
   for(let i=0;i<9;i++){ let x=TW+rnd()*(MW-2)*TW, y=2*TW+rnd()*(MH-3)*TW;                              // 바닥 균열
     for(let k=0;k<10;k++){ R(c,x,y,1,1,'#202326'); x+=rnd()<.5?1:-1+(rnd()*3|0); y+=1; } }
   R(c,0,0,MW*TW,32,'#23272b'); for(let x=0;x<MW*TW;x+=32) R(c,x,0,1,26,'#1b1e21'); R(c,0,12,MW*TW,1,'#1b1e21');
   for(let x=0;x<MW*TW;x+=8){ R(c,x,26,4,4,'#7a6620'); R(c,x+4,26,4,4,'#161616'); }                       // 경고 띠
-  [3,8].forEach(tx=>{ box(c,tx*TW,6,22,12,'#2b3034','#363b40','#1e2225'); for(let k=0;k<4;k++) R(c,tx*TW+3,8+k*2,16,1,'#15181a'); }); // 환풍구
-  box(c,16*TW,5,2*TW,16,'#8a7420','#a08a2a','#6a5818','#141414');                                      // 경고 표지판
-  for(let i=0;i<7;i++) R(c,17*TW-i,8+i,1+2*i,1,'#141414'); R(c,17*TW-1,10,2,3,'#8a7420'); R(c,17*TW-1,14,2,1,'#8a7420');
+  [130,322].forEach(x=>{ box(c,x,2,22,12,'#2b3034','#363b40','#1e2225'); for(let k=0;k<4;k++) R(c,x+3,4+k*2,16,1,'#15181a'); }); // 환풍구 (생산기·배양기 위)
   R(c,0,0,TW,MH*TW,'#16191c'); R(c,(MW-1)*TW,0,TW,MH*TW,'#16191c'); R(c,0,(MH-1)*TW,MW*TW,TW,'#16191c'); R(c,TW-2,32,2,(MH-3)*TW,'#0f1113'); R(c,(MW-1)*TW,32,2,(MH-3)*TW,'#0f1113');
   R(c,11*TW,(MH-1)*TW,2*TW,TW,'#3a3f44'); R(c,11*TW+2,(MH-1)*TW+2,2*TW-4,TW-2,'#4a5056'); R(c,11*TW+15,(MH-1)*TW+2,2,TW-2,'#2a2e32');
   for(let i=0;i<2*TW;i+=2){ R(c,11*TW+i,(MH-1)*TW+4+(i>>1)%12,2,2,'#c9a722'); R(c,11*TW+i,(MH-1)*TW+14-(i>>1)%12,2,2,'#c9a722'); } // 출입 금지 테이프
   R(c,10*TW+8,(MH-2)*TW+4,3*TW,TW-6,'#2b2f33');
 });
 // 조명: 전체를 어둡게 + 가장자리 비네팅
-const SHADE=mkCanvas(MW*TW,MH*TW,c=>{ c.fillStyle='rgba(6,10,14,.28)'; c.fillRect(0,0,MW*TW,MH*TW);
-  const g=c.createRadialGradient(MW*TW/2,MH*TW/2,60,MW*TW/2,MH*TW/2,MW*TW*.62); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.7)');
+const SHADE=mkCanvas(MW*TW,MH*TW,c=>{ c.fillStyle='rgba(6,10,14,.2)'; c.fillRect(0,0,MW*TW,MH*TW);
+  const g=c.createRadialGradient(MW*TW/2,MH*TW/2,70,MW*TW/2,MH*TW/2,MW*TW*.64); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.6)');
   c.fillStyle=g; c.fillRect(0,0,MW*TW,MH*TW); });
-const LAMPS=[[5*TW+8,10],[18*TW+8,10]];
+const LAMPS=[[296,8]]; // 가로 선반 위 비상등
 function drawLighting(t){ mctx.drawImage(SHADE,0,0);
   LAMPS.forEach(([x,y],i)=>{ const a=.25+.2*Math.sin(t/600+i*2); const g=mctx.createRadialGradient(x,y,1,x,y,40);
     g.addColorStop(0,`rgba(255,40,40,${a})`); g.addColorStop(1,'rgba(255,40,40,0)'); mctx.fillStyle=g; mctx.fillRect(x-40,y-40,80,80);
@@ -518,15 +611,21 @@ function drawLighting(t){ mctx.drawImage(SHADE,0,0);
 /* ---------------- 플레이어 ---------------- */
 const PL={x:11.5*TW+8,y:12*TW+8,dir:'up',walk:0,path:null};
 const PCACHE={};
-function playerSprite(dir,f){ const k=dir+f; if(PCACHE[k]) return PCACHE[k]; return PCACHE[k]=mkCanvas(12,18,c=>{
-  const hair='#3a2a20',skin='#f1c8a0',coat='#f4f6f8',line='#2a2a2a';
-  R(c,3,0,6,1,line); R(c,2,1,8,7,line); R(c,3,1,6,3,hair); R(c,2,2,1,3,hair); R(c,9,2,1,3,hair);
-  if(dir==='up'){ R(c,3,3,6,4,hair);} else if(dir==='down'){ R(c,3,4,6,3,skin); R(c,4,5,1,1,'#222'); R(c,7,5,1,1,'#222'); }
-  else { const r=dir==='right'; R(c,r?4:3,4,5,3,skin); R(c,r?7:4,5,1,1,'#222'); R(c,r?3:8,3,1,3,hair); }
-  R(c,1,7,10,8,line); R(c,2,8,8,6,coat); if(dir==='down'){ R(c,5,8,2,3,'#3a6ea5'); R(c,4,8,1,5,'#d6dbdf'); R(c,7,8,1,5,'#d6dbdf'); }
-  if(dir==='left'||dir==='right'){ R(c,dir==='right'?5:6,9,1,4,'#d6dbdf'); }
-  R(c,1,9,1,4,skin); R(c,10,9,1,4,skin); R(c,3,14,6,2,'#2c3e5a');
-  const a=f?1:0; R(c,3,16-a,2,2,'#222'); R(c,7,16-(1-a)*(f?0:0),2,2,'#222'); if(f){ R(c,7,15,2,1,'#2c3e5a'); }
+// 캐릭터 14×22 (이전 12×18의 약 1.2배)
+const PW=14, PH=22;
+function playerSprite(dir,f){ const k=dir+f; if(PCACHE[k]) return PCACHE[k]; return PCACHE[k]=mkCanvas(PW,PH,c=>{
+  const hair='#3a2a20',skin='#f1c8a0',coat='#f4f6f8',line='#2a2a2a',r=dir==='right';
+  R(c,4,0,6,1,line); R(c,3,1,8,9,line); R(c,4,1,6,3,hair); R(c,3,2,1,5,hair); R(c,10,2,1,5,hair);           // 머리
+  if(dir==='up'){ R(c,4,3,6,6,hair); }
+  else if(dir==='down'){ R(c,4,4,6,5,skin); R(c,4,4,6,1,hair); R(c,5,6,1,2,'#222'); R(c,8,6,1,2,'#222'); R(c,6,8,2,1,'#d99a86'); }
+  else { R(c,r?5:4,4,5,5,skin); R(c,r?5:4,4,5,1,hair); R(c,r?8:5,6,1,2,'#222'); R(c,r?4:9,3,1,5,hair); }
+  R(c,2,10,10,8,line); R(c,3,11,8,6,coat);                                                                  // 실험복
+  if(dir==='down'){ R(c,6,11,2,4,'#3a6ea5'); R(c,5,11,1,6,'#d6dbdf'); R(c,8,11,1,6,'#d6dbdf'); }
+  if(dir==='left'||dir==='right'){ R(c,r?6:7,12,1,5,'#d6dbdf'); }
+  if(dir==='up'){ R(c,6,12,2,4,'#e6e9ec'); }
+  R(c,1,11,1,5,coat); R(c,12,11,1,5,coat); R(c,1,16,1,1,skin); R(c,12,16,1,1,skin);                          // 팔·손
+  R(c,4,17,6,3,'#2c3e5a');                                                                                   // 바지
+  if(f){ R(c,4,19,2,3,'#222'); R(c,8,20,2,2,'#222'); } else { R(c,4,20,2,2,'#222'); R(c,8,19,2,3,'#222'); }   // 신발(걷기 2프레임)
 });}
 
 /* ---------------- 화면 레이아웃 ---------------- */
@@ -605,7 +704,7 @@ function hlTrack(){ if(!hlFn) return; const r=hlFn(); if(!r) return;
   Object.assign(hole.style,{left:l+'px',top:t+'px',width:(rr-l)+'px',height:(b-t)+'px'}); }
 const elRect=el=>()=>el&&el.getBoundingClientRect();
 function objRect(id){ const o=OBJECTS.find(o=>o.id===id); return ()=>{ const wr=worldEl.getBoundingClientRect(), s=MAPR.s;
-  return {left:wr.left+MAPR.left+o.x*TW*s,top:wr.top+MAPR.top+(o.y-o.top)*TW*s,width:o.w*TW*s,height:(o.h+o.top)*TW*s}; }; }
+  return {left:wr.left+MAPR.left+o.fx*s,top:wr.top+MAPR.top+(o.fy-o.th)*s,width:o.fw*s,height:(o.fh+o.th)*s}; }; }
 
 /* ---------------- 상자 (튜토리얼·텍스트) ---------------- */
 let boxN=0;
@@ -674,6 +773,28 @@ async function placeWhenReady(id){
 }
 const hasAll=ids=>ids.every(i=>inv.has(i));
 
+// 연출 안내 문구: 팝업 아래쪽에 작게 표시 (세포 융합기는 접안렌즈 장면에 별도 문구가 있음)
+const pdiscEl=$('#pdisc');
+const DISC_TXT=p=>`※ ${p} 서사 속에서 생명공학 기술의 활용을 보여 주기 위한 연출로, 실제와 다르거나 축약된 부분이 있습니다.`;
+function discText(){
+  const id=popupMod&&Object.keys(MODS).find(k=>MODS[k]===popupMod);
+  switch(id){
+    case 'table': { const st=S.pop.table.stage;
+      if(/^rat|^bReady/.test(st)) return DISC_TXT('비장에서 B림프구를 추출하는 과정은');
+      if(/^tr/.test(st)) return DISC_TXT('잡종세포를 배지에 옮기는 과정은'); return ''; }
+    case 'incubator': return /^(initial|idle)$/.test(S.pop.incubator.stage)?'':DISC_TXT('세포를 배양하는 과정은');
+    case 'microscope': return DISC_TXT('잡종세포 클론을 분리하는 과정은');
+    case 'tester': { if(MODS.tester.mode==='second') return ''; const st=S.pop.tester.stage;
+      if(st.startsWith('ext')) return DISC_TXT('항체를 추출하여 홈판에 옮기는 과정은');
+      if(st.startsWith('ant')) return DISC_TXT('항원과 대조군을 입력하는 과정은');
+      if(st==='graph') return DISC_TXT('항원-항체 반응을 검사하는 과정은'); return ''; }
+    case 'producer': return DISC_TXT('단클론항체 치료제를 생산하는 과정은');
+    case 'editor': return DISC_TXT('유전자를 편집하는 과정은');
+  }
+  return '';
+}
+function updateDisc(){ const t=discText(); if(pdiscEl.textContent!==t) pdiscEl.textContent=t; }
+
 /* =====================================================================
    사물별 가상 팝업창
    ===================================================================== */
@@ -683,7 +804,7 @@ const MODS={};
 MODS.cage={
   tryOpen(){ if(S.rat) return flash('이미 데려갈 쥐를 선택했습니다.',2000); openPopup(this); },
   render(){ P.illus('cage'); [['ratA',36],['ratB',64]].forEach(([id,x])=>P.item(id,x,63,{size:13,take:el=>this.take(el,id)})); },
-  enter(){ later(1000,()=>stageMsg('당신은 두 마리의 쥐 중 한 마리만 데려갈 수 있습니다.')); },
+  enter(){ later(300,()=>stageMsg('당신은 두 마리의 쥐 중 한 마리만 데려갈 수 있습니다.')); },
   async take(el,id){ S.rat=id.slice(-1); stageMsg(null); const p=takeItem(el,id); await wait(500); await Promise.all([p,closePopup()]); },
 };
 
@@ -1062,7 +1183,7 @@ function placeholder(src){ return new Promise(res=>{
 async function ending1Prompt(){
   lockN++; await textBox('이제 좀비 바이러스 치료제를 감염된 사람들에게 투여해 봅시다.',[['go','투여하기']]);
   await playVideo(VIDEO.ending1); await fade(cineEl,0,2000); cineEl.style.display='none'; cineEl.innerHTML=''; cineOn=false;
-  await textBox('치료제를 투여해도 치료되지 않는 감염자가 나타났습니다. 과학 선생님의 일지에는 해결 방법이 나와 있지 않습니다...',[['ok','해결 방법을 생각해 보자.']]);
+  await textBox('치료제를 투여하였지만, 마지막 한 명의 감염자가 치료되지 않고 있습니다. 교사 A의 연구 일지에도 해결 방법이 나와 있지 않습니다.',[['ok','해결 방법을 생각해 보자.']]);
   S.flags.ending1Seen=true; lockN--; save();
 }
 async function ending2Prompt(){
@@ -1154,7 +1275,8 @@ mapCv.addEventListener('pointerdown',e=>{
   PL.path=findPath(mx,my);
 });
 function blocked(x,y){ for(const [px,py] of [[x-5,y-3],[x+5,y-3],[x-5,y+3],[x+5,y+3]]){ const tx=Math.floor(px/TW), ty=Math.floor(py/TW);
-  if(tx<0||ty<0||tx>=MW||ty>=MH||SOLID[ty][tx]) return true; } return false; }
+    if(tx<0||ty<0||tx>=MW||ty>=MH||WALL[ty][tx]) return true; }
+  return RECTS.some(r=>x+5>r.x&&x-5<r.x+r.w&&y+3>r.y&&y-3<r.y+r.h); }
 function findPath(mx,my){
   const sx=Math.floor(PL.x/TW), sy=Math.floor(PL.y/TW); const dist=[...Array(MH)].map(()=>Array(MW).fill(-1)), prev={};
   const q=[[sx,sy]]; dist[sy][sx]=0;
@@ -1173,16 +1295,19 @@ function interact(o){
   if(S.phase!=='dev') return; deselect(); MODS[o.id].tryOpen();
 }
 function updateNear(){
-  let n=null; for(const o of OBJECTS){ const x0=o.x*TW-6, y0=o.y*TW-6, x1=(o.x+o.w)*TW+6, y1=(o.y+o.h)*TW+6;
-    if(PL.x+5>x0&&PL.x-5<x1&&PL.y+3>y0&&PL.y-3<y1){ n=o; break; } }
+  // 주변 영역(발판 둘레 6px)에 걸친 사물이 여럿이면 가장 가까운 하나만 선택 → 붙어 있는 사물도 동시에 활성화되지 않음
+  const ZM=14; // 주변 영역 여유(px): 발판에 거의 닿을 만큼 다가가면 상호작용
+  let n=null, nd=1e9; for(const o of OBJECTS){ const x0=o.fx-ZM, y0=o.fy-ZM, x1=o.fx+o.fw+ZM, y1=o.fy+o.fh+ZM;
+    if(PL.x+5>x0&&PL.x-5<x1&&PL.y+3>y0&&PL.y-3<y1){ const d=Math.hypot(PL.x-(o.fx+o.fw/2),PL.y-(o.fy+o.fh/2)); if(d<nd){ nd=d; n=o; } } }
   NEAR=n; const show=n&&!locked();
   if(show){ let lb=labelsEl.firstChild; if(!lb){ lb=document.createElement('div'); lb.className='olabel'; labelsEl.appendChild(lb); }
-    lb.textContent=n.name; lb.style.left=(MAPR.left+(n.x+n.w/2)*TW*MAPR.s)+'px'; lb.style.top=(MAPR.top+(n.y-n.top)*TW*MAPR.s-4)+'px'; }
+    lb.textContent=n.name; lb.style.left=(MAPR.left+(n.fx+n.fw/2)*MAPR.s)+'px'; lb.style.top=(MAPR.top+(n.fy-n.th)*MAPR.s-4)+'px'; }
   else labelsEl.innerHTML='';
   restartEl.style.display=S.phase==='dev'&&!locked()?'block':'none';
   hintEl.style.display=show&&!IS_MOBILE?'block':'none'; actEl.style.display=show&&IS_MOBILE?'block':'none';
 }
 let last=performance.now();
+const MOVE_SPEED=108; // 캐릭터 이동 속도(맵 픽셀/초). 처음 72에서 50% 늘림
 function frame(t){
   const dt=Math.min(.05,(t-last)/1000); last=t;
   let dx=0, dy=0;
@@ -1190,20 +1315,20 @@ function frame(t){
     if(K('left'))dx-=1; if(K('right'))dx+=1; if(K('up'))dy-=1; if(K('down'))dy+=1;
     if(dx||dy) PL.path=null;
     else if(PL.path){ const [tx,ty]=PL.path[0]; const ddx=tx-PL.x, ddy=ty-PL.y, d=Math.hypot(ddx,ddy);
-      if(d<1.5){ PL.x=tx; PL.y=ty; PL.path.shift(); if(!PL.path.length) PL.path=null; } else { dx=ddx/d; dy=ddy/d; } }
+      if(d<=Math.max(1.5,MOVE_SPEED*dt)){ PL.x=tx; PL.y=ty; PL.path.shift(); if(!PL.path.length) PL.path=null; } else { dx=ddx/d; dy=ddy/d; } } // 한 번에 지나칠 거리면 바로 도착 처리
   } else PL.path=null;
-  if(dx||dy){ const sp=72*dt, l=Math.hypot(dx,dy); const vx=dx/l*sp, vy=dy/l*sp; let moved=false;
+  if(dx||dy){ const sp=MOVE_SPEED*dt, l=Math.hypot(dx,dy); const vx=dx/l*sp, vy=dy/l*sp; let moved=false;
     if(!blocked(PL.x+vx,PL.y)){ PL.x+=vx; moved=true; } if(!blocked(PL.x,PL.y+vy)){ PL.y+=vy; moved=true; }
     if(!moved) PL.path=null;
     PL.dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'); PL.walk+=dt*8;
     if(SEL&&!popupMod) deselect();
   } else PL.walk=0;
   mctx.imageSmoothingEnabled=false; mctx.drawImage(FLOOR,0,0);
-  const list=SPRITES.map(s=>({b:s.base,draw:()=>mctx.drawImage(s.cv,s.x,s.y)}));
-  list.push({b:PL.y+3,draw:()=>{ mctx.fillStyle='rgba(0,0,0,.25)'; mctx.fillRect(Math.round(PL.x)-5,Math.round(PL.y)+1,10,3);
-    mctx.drawImage(playerSprite(PL.dir,Math.floor(PL.walk)%2),Math.round(PL.x)-6,Math.round(PL.y)-15); }});
+  const list=SPRITES.map(s=>({b:s.base,draw:()=>mctx.drawImage(s.cv,Math.round(s.x),Math.round(s.y),Math.round(s.w),Math.round(s.h))}));
+  list.push({b:PL.y+3,draw:()=>{ mctx.fillStyle='rgba(0,0,0,.25)'; mctx.fillRect(Math.round(PL.x)-6,Math.round(PL.y)+1,12,3);
+    mctx.drawImage(playerSprite(PL.dir,Math.floor(PL.walk)%2),Math.round(PL.x)-PW/2,Math.round(PL.y)+4-PH); }});
   list.sort((a,b)=>a.b-b.b).forEach(o=>o.draw()); drawLighting(t);
-  updateNear(); hlTrack();
+  updateNear(); hlTrack(); updateDisc();
   requestAnimationFrame(frame);
 }
 
@@ -1259,6 +1384,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden) save(); }
 function start(){
   layout(); const sv=loadSave();
   if(sv&&sv.phase!=='tutorial'){ S=Object.assign(freshState(),sv); if(S.player){ PL.x=S.player.x; PL.y=S.player.y; PL.dir=S.player.dir||'up'; } }
+  if(blocked(PL.x,PL.y)){ PL.x=11.5*TW+8; PL.y=12*TW+8; } // 맵 배치가 바뀌어 저장된 위치가 사물 안이면 출입문 앞으로
   renderInv(); setPhaseLabel(); msgUpdate(); requestAnimationFrame(frame);
   if(S.phase==='tutorial') runTutorial();
   else if(S.flags.finished) showEnd(true);
