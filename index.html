@@ -74,9 +74,10 @@ body.mobile #pad{display:grid}
 #tut .btns{display:flex;justify-content:center;gap:12px;margin-top:16px}
 
 /* 화면 위 문구 */
-#msg{position:fixed;left:50%;top:calc(var(--inv-h) + 16px);transform:translateX(-50%);color:#fff;font-size:var(--msg-size);padding:6px 18px;
+/* 좌우 모서리(단계 표시·처음부터 버튼) 폭만큼 비워 두고 그 사이에서 줄바꿈 → 겹치지 않음 */
+#msg{position:fixed;left:50%;top:calc(var(--inv-h) + 16px);transform:translateX(-50%);color:#fff;font-size:clamp(11px,2.4vw,var(--msg-size));padding:6px 18px;
   background:rgba(28,28,28,.72);box-shadow:0 0 12px 8px rgba(28,28,28,.72);border-radius:10px;z-index:60;pointer-events:none;opacity:0;
-  display:none;width:max-content;max-width:min(92vw,900px);text-align:center;line-height:1.45;word-break:keep-all}
+  display:none;width:max-content;max-width:min(900px,calc(100vw - 2 * var(--corner-w,0px) - 40px));text-align:center;line-height:1.45;word-break:keep-all}
 
 /* 설명창 */
 #desc{position:fixed;background:var(--desc-bg);padding:10px 14px;z-index:65;display:none;max-width:250px;color:#fff}
@@ -102,9 +103,10 @@ body.mobile #pad{display:grid}
   font-size:16px;line-height:1.8;padding:20px}
 @media (orientation:portrait){ body.mobile.ml #rotate{display:flex} }
 #restart{position:absolute;top:8px;right:8px;z-index:6;display:none;background:transparent;border:1px solid rgba(255,255,255,.25);
-  color:rgba(255,255,255,.45);font-size:11px;padding:4px 8px;cursor:pointer;min-width:var(--btn-min);min-height:var(--btn-min)}
+  color:rgba(255,255,255,.45);font-size:clamp(9px,1.3vw,11px);padding:clamp(2px,.4vw,4px) clamp(4px,.8vw,8px);cursor:pointer;min-width:var(--btn-min);min-height:var(--btn-min)}
 #restart:hover{color:#fff;border-color:#fff}
-#phase{position:absolute;top:8px;left:8px;z-index:6;border:1px solid #fff;color:#fff;font-size:11px;padding:4px 8px;
+#phase{position:absolute;top:8px;left:8px;z-index:6;border:1px solid #fff;color:#fff;font-size:clamp(9px,1.3vw,11px);
+  padding:clamp(2px,.4vw,4px) clamp(4px,.8vw,8px);white-space:nowrap;
   pointer-events:none;background:rgba(0,0,0,.35);line-height:normal}
 body.a11y #phase{min-height:var(--btn-min);display:flex;align-items:center}
 .endr{margin-top:28px;opacity:0}
@@ -202,7 +204,7 @@ const ITEMS = {
   ratA:{name:'실험용 쥐 A', desc:'좀비 바이러스에 감염된 실험용 쥐.\n바이러스에 대한 항체를 만드는 B림프구를 가지고 있다.'},
   ratB:{name:'실험용 쥐 B', desc:'좀비 바이러스에 감염된 실험용 쥐.\n바이러스에 대한 항체를 만드는 B림프구를 가지고 있다.'},
   bcell:{name:'B림프구', desc:'감염된 쥐의 비장에서 추출한 B림프구 클론들.\n항체를 만들지만 몸 밖에서는 오래 증식하지 못한다.'},
-  virus:{name:'좀비 바이러스 조각', desc:'비활성화 처리한 좀비 바이러스의 표면 단백질 조각.\n항원-항체 반응 검사에서 항원으로 쓰인다.'},
+  virus:{name:'좀비 바이러스 조각', desc:'항원-항체 반응 검사에 쓰기 위해 준비한 좀비 바이러스 S-단백질 조각들의 혼합물. 표적 세포의 수용체와 결합하기 전 상태의 S-단백질 조각과, 수용체와 결합한 뒤 구조가 바뀌어 막 융합 부위가 드러난 상태로 고정한 S-단백질 조각이 섞여 있다. 바이러스 유전체가 없어 감염력은 없다.'},
   hybrid:{name:'잡종세포', desc:'B림프구와 암세포가 융합된 세포.\n항체를 만들면서 계속 분열할 수 있다.'},
   hybridMedium:{name:'잡종세포가 들어있는 배지', desc:'잡종세포를 옮겨 담은 HAT 배지.\n세포 배양기에서 키워야 한다.'},
   hybridCultured:{name:'배양된 잡종세포', desc:'HAT 배지에서 살아남아 증식한 잡종세포 집단.\n서로 다른 항체를 만드는 세포들이 섞여 있다.'},
@@ -215,6 +217,11 @@ const ITEMS = {
   treatY:{name:'좀비 바이러스 치료제', desc:''},
   edited:{name:'유전자가 편집된 클론', desc:'항체 가변부위 DNA를 새로운 염기서열로 바꾼 클론.'},
   treatZ:{name:'1회용 좀비 바이러스 치료제', desc:'유전자가 편집된 클론에서 얻은 항체로 만든 1회용 치료제.'},
+};
+// 치료제 설명 (쥐 알파벳 기준. 1회용 치료제도 같은 알파벳의 설명을 쓴다)
+const TREAT_DESC = {
+  A:'좀비 바이러스 표면 S-단백질의 수용체 결합 부위에 결합하여, 바이러스가 표적 세포의 수용체에 붙지 못하도록 막는 항체가 들어 있다.',
+  B:'표적 세포의 수용체와 결합한 뒤 구조가 바뀌어 드러난 좀비 바이러스 S-단백질의 융합 부위에 결합하여, 바이러스의 막 융합을 방해하는 항체가 들어 있다.',
 };
 const DONE_TXT='이곳에서 해야 할 작업을 마쳤습니다.', NOTYET_TXT='아직 상호작용할 수 없습니다.';
 
@@ -320,8 +327,9 @@ function drawIcon(c,id,L){
   case 'hybridCultured': flask(c,'#e47f86'); [[3,10],[5,11],[7,10],[9,11],[4,12],[8,12],[10,10]].forEach(([x,y])=>R(c,x,y,1,1,'#7a3f8e')); break;
   case 'bcell': R(c,5,1,7,3,'#1d3e70');R(c,6,2,5,1,'#3b6fb6'); R(c,5,4,7,8,'#3a4046');R(c,6,4,5,7,'#e8f1f5'); R(c,6,11,5,2,'#3a4046');R(c,7,11,3,1,'#e8f1f5');
     R(c,7,13,3,2,'#3a4046'); R(c,6,7,5,4,'#8fbbee'); R(c,7,8,1,1,'#2a5aa8');R(c,9,9,1,1,'#2a5aa8');R(c,8,10,1,1,'#2a5aa8'); break;
-  case 'virus': [[7,1],[7,13],[1,7],[13,7],[3,3],[11,3],[3,11],[11,11]].forEach(([x,y])=>{R(c,x,y,2,2,'#2e6e28');});
-    disc(c,8,8,5,'#2e6e28'); disc(c,8,8,4.2,'#6cc05a'); R(c,6,6,2,1,'#2e6e28');R(c,9,9,2,1,'#2e6e28');R(c,6,10,1,1,'#2e6e28'); R(c,6,5,2,1,'#b6f0a0'); break;
+  case 'virus': dish(c,'#eef1f2'); // 페트리 접시 위의 잘게 쪼개진 초록색 S-단백질 조각들
+    [[4,5,2,2],[8,4,2,1],[10,6,2,2],[5,8,1,2],[7,7,2,2],[11,9,1,2],[4,10,2,1],[8,10,2,2],[6,12,2,1],[10,12,1,1],[12,7,1,1],[6,4,1,1]].forEach(([x,y,w,h],i)=>{
+      R(c,x,y,w,h,['#3f8a35','#5aa94a','#2e6e28'][i%3]); if(w>1&&h>1) R(c,x,y,1,1,'#9ad884'); }); break;
   case 'ratA': case 'ratB': spr(c,RAT,{k:'#7a7a7a',w:'#f7f7f7',p:'#e9a3b0',r:'#d23a3a'},0,1); badge(c,id.slice(-1)); break;
   case 'cloneA':case 'cloneB':case 'cloneC':case 'cloneD':case 'cloneE': dish(c,'#f1ecef'); cellAb(c,8,8.5,2.6,'#d8a6e2','#7b4290',id.slice(-1)); badge(c,id.slice(-1)); break;
   case 'cloneCCultured': flask(c,'#e47f86'); [[3,10],[5,11],[7,10],[9,11],[10,10]].forEach(([x,y])=>{R(c,x,y,1,1,'#7a3f8e');R(c,x+1,y-1,1,1,ABCOL.C);}); badge(c,'C'); break;
@@ -351,7 +359,8 @@ function iconURL(id){ const L=iconLetter(id)||''; const k=id+'|'+L; if(ICACHE[k]
 function itemName(id){ if(id==='treatY') return '좀비 바이러스 치료제 '+(S.rat||'');
   if(id==='treatZ') return '1회용 좀비 바이러스 치료제 '+(S.rat?other(S.rat):'');
   if(id==='edited') return '유전자가 편집된 클론 '+(S.editLetter||''); return (ITEMS[id]||{}).name||id; }
-function itemDesc(id){ if(id==='treatY') return '클론 C가 만든 단클론항체로 만든 치료제.\n항체 가변부위를 암호화하는 유전자의 염기 서열:\n'+(SEQ[S.rat]||'');
+function itemDesc(id){ if(id==='treatY') return S.rat?TREAT_DESC[S.rat]+'\n항체 가변부위 DNA의 염기서열: '+SEQ[S.rat]:''; // 1회용(Z)에는 서열 없음
+  if(id==='treatZ') return S.rat?TREAT_DESC[other(S.rat)]:'';
   if(id==='edited') return '항체 가변부위 DNA를 새로운 염기서열로 바꾼 클론 '+(S.editLetter||'')+'.'; return (ITEMS[id]||{}).desc||''; }
 
 /* ---------------- 팝업 일러스트 (200×125 도트) ---------------- */
@@ -527,6 +536,7 @@ let MAPR={left:0,top:0,s:1};
 const slots=[];
 for(let i=0;i<8;i++){ const d=document.createElement('div'); d.className='slot'; invEl.appendChild(d); slots.push(d); }
 function layout(){
+  if(typeof updateCorners==='function') updateCorners();
   const W=innerWidth, H=invEl.getBoundingClientRect().height, pt=4/3, mob=IS_MOBILE&&FEATURES.mobileLayout;
   const m=mob?Math.min(30*pt,Math.max(10*pt,W*.03)):30*pt, vpad=(mob?8:10)*pt, gMin=6;
   const s=Math.max(16,Math.min(H-2*vpad,(W-2*m-7*gMin)/8)), g=(W-2*m-8*s)/7;
@@ -1112,8 +1122,10 @@ function finishTutorial(skipped){ S.phase='dev'; S.skipped=skipped; TUT.lock=fal
 
 /* ---------------- 단계 표시 (왼쪽 위) ---------------- */
 const phaseEl=$('#phase');
-function setPhaseLabel(){ phaseEl.textContent=S.phase==='tutorial'?'튜토리얼 단계':'치료제 개발 단계'; phaseEl.style.opacity=1; }
-async function phaseToDev(){ await fade(phaseEl,0,300); await wait(300); phaseEl.textContent='치료제 개발 단계'; await fade(phaseEl,1,500); }
+function setPhaseLabel(){ phaseEl.textContent=S.phase==='tutorial'?'튜토리얼 단계':'치료제 개발 단계'; phaseEl.style.opacity=1; updateCorners(); }
+async function phaseToDev(){ await fade(phaseEl,0,300); await wait(300); phaseEl.textContent='치료제 개발 단계'; updateCorners(); await fade(phaseEl,1,500); }
+// 모서리 요소 폭을 CSS 변수로 알려 화면 위 문구가 그 사이에서만 펼쳐지게 한다
+function updateCorners(){ document.documentElement.style.setProperty('--corner-w',(phaseEl.offsetWidth+8)+'px'); }
 
 /* ---------------- 입력·이동 ---------------- */
 let lockN=0;
