@@ -1181,14 +1181,16 @@ function placeholder(src){ return new Promise(res=>{
   sk.onclick=end; cineEl.appendChild(sk); iv=setInterval(()=>{ t--; draw(); if(t<=0) end(); },1000/SPEED);
 });}
 async function ending1Prompt(){
-  lockN++; await textBox('이제 좀비 바이러스 치료제를 감염된 사람들에게 투여해 봅시다.',[['go','투여하기']]);
-  await playVideo(VIDEO.ending1); await fade(cineEl,0,2000); cineEl.style.display='none'; cineEl.innerHTML=''; cineOn=false;
+  lockN++; const k=await textBox('이제 좀비 바이러스 치료제를 감염된 사람들에게 투여해 봅시다.',[['go','투여하기 (영상 시청)'],['skip','영상 건너뛰기']]);
+  if(k==='go'){ await playVideo(VIDEO.ending1); await fade(cineEl,0,2000); cineEl.style.display='none'; cineEl.innerHTML=''; cineOn=false; }
+  // 건너뛰기: 영상·암전 없이 영상이 끝난 뒤의 안내로 바로 진행
   await textBox('치료제를 투여하였지만, 마지막 한 명의 감염자가 치료되지 않고 있습니다. 교사 A의 연구 일지에도 해결 방법이 나와 있지 않습니다.',[['ok','해결 방법을 생각해 보자.']]);
   S.flags.ending1Seen=true; lockN--; save();
 }
 async function ending2Prompt(){
-  lockN++; await textBox('이제 두 좀비 바이러스 치료제를 섞어 마지막 감염된 사람들에게 투여해 봅시다.',[['go','투여하기']]);
-  await playVideo(VIDEO.ending2); S.phase='ending'; S.flags.finished=true; lockN--; save(); showEnd(false);
+  lockN++; const k=await textBox('이제 두 좀비 바이러스 치료제를 섞어 마지막 감염된 사람들에게 투여해 봅시다.',[['go','투여하기 (영상 시청)'],['skip','영상 건너뛰기']]);
+  if(k==='go') await playVideo(VIDEO.ending2);   // 건너뛰기: 영상 없이 바로 엔딩 화면
+  S.phase='ending'; S.flags.finished=true; lockN--; save(); showEnd(false);
 }
 async function showEnd(instant){
   cineOn=true; cineEl.innerHTML='<div class="endt">당신은 좀비 바이러스를 막고 학교를 지켜낸 영웅입니다!</div><div class="endb">The END</div>';
