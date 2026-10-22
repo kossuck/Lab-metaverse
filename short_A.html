@@ -26,6 +26,9 @@ button{font-family:var(--font)}
 .slot{position:absolute;background:var(--slot-fill);border:2px solid var(--slot-line);display:flex;align-items:center;justify-content:center}
 .slot img{width:80%;height:80%;cursor:pointer}
 .slot img.sel{outline:2px solid var(--select);outline-offset:1px}
+/* 배치해야 할 아이템: 약한 노란 빛이 천천히 깜빡임 */
+.slot.need{animation:needGlow 1.4s ease-in-out infinite}
+@keyframes needGlow{0%,100%{box-shadow:0 0 0 0 rgba(255,212,0,0);border-color:#fff}50%{box-shadow:0 0 10px 2px rgba(255,212,0,.5);border-color:#ffe680}}
 
 /* 메타버스 영역 */
 #world{position:fixed;left:0;right:0;bottom:0;top:var(--inv-h);background:#060708;overflow:hidden}
@@ -246,7 +249,11 @@ const $=s=>document.querySelector(s);
 // 축약 버전(A·B)은 1.5배 빠르게. ('아직 상호작용할 수 없습니다' 같은 알림 문구 유지 시간은 그대로)
 const BASE_SPEED=SHORT.on?1.5:1;
 let SPEED=BASE_SPEED;
-const wait=ms=>new Promise(r=>setTimeout(r,ms/SPEED));
+// 축약 버전(A·B) 빠른 진행: 단계 사이 짧은 대기(≤0.6초)는 크게 줄이고, 문구를 읽는 대기(≥1.2초)는 최소 1.2초를 남긴다
+const QUICK=SHORT.on;
+function waitMs(ms){ if(!QUICK) return ms/SPEED; const k=SPEED/BASE_SPEED;
+  if(ms<=600) return ms*0.4/SPEED; if(ms<1200) return ms*0.6/SPEED; return Math.max(1200/k, ms*0.8/SPEED); }
+const wait=ms=>new Promise(r=>setTimeout(r,waitMs(ms)));
 const IS_MOBILE=(()=>{const m=new URLSearchParams(location.search).get('mode');
   if(m==='mobile')return true; if(m==='desktop')return false;
   return matchMedia('(pointer:coarse)').matches && Math.min(screen.width,screen.height)<900;})();
@@ -810,6 +817,24 @@ function discText(){
 }
 function updateDisc(){ const t=discText(); if(pdiscEl.textContent!==t) pdiscEl.textContent=t; }
 
+// 축약 버전: 지금 열린 가상 팝업창에 배치해야 할 아이템을 인벤토리에서 약하게 깜빡여 표시
+function neededItems(){
+  const id=popupMod&&Object.keys(MODS).find(k=>MODS[k]===popupMod); if(!id||busyN||popupAnim) return [];
+  switch(id){
+    case 'table': { const T=S.pop.table; if(T.stage==='ratWait') return ['rat'+S.rat]; if(T.stage==='trWait') return ['hybrid','medium'].filter(i=>!T.placed[i]); return []; }
+    case 'incubator': { const I=S.pop.incubator; return I.stage==='cWait'?[I.mode==='hybrid'?'hybridMedium':'cloneC']:[]; }
+    case 'fusion': { const F=S.pop.fusion; return F.stage==='place'?['cancer','bcell'].filter(i=>!F.placed[i]):[]; }
+    case 'microscope': return S.pop.microscope.stage==='place'?['hybridCultured']:[];
+    case 'tester': { const X=S.pop.tester; if(MODS.tester.mode!=='first') return [];
+      if(X.stage==='ext') return LETTERS.filter(l=>!X.placed[l]).map(l=>'clone'+l);
+      if(X.stage==='ant') return X.ant.virus?(X.ant.epithelial?[]:['epithelial']):['virus']; return []; }
+    case 'producer': { const Pr=S.pop.producer; return Pr.stage==='wait'?[Pr.mode==='Y'?'cloneCCultured':'edited']:[]; }
+    case 'editor': return S.pop.editor.stage==='wait'?EDIT_OK:[];
+  }
+  return [];
+}
+function updateNeed(){ if(!QUICK) return; const need=neededItems(); slots.forEach((d,i)=>d.classList.toggle('need',!!S.inv[i]&&need.includes(S.inv[i]))); }
+
 /* =====================================================================
    사물별 가상 팝업창
    ===================================================================== */
@@ -863,7 +888,7 @@ MODS.table={
     await wait(300); b.remove(); const syr=P.sprite('syringe',66,50,14,{o:0}); await fade(syr,1);
     await moveTo(syr,52,52,800); await wait(400); await moveTo(syr,66,50,800);
     stageMsg('B림프구 클론들이 추출되었습니다'); await wait(500); await P.fadeOut(300,'rat',syr); await wait(500);
-    T.stage='bReady'; await fade(this.bItem(0),1); })); },
+    T.stage='bReady'; const bi=this.bItem(0); await fade(bi,1); if(QUICK){ await wait(800); await this.takeB(bi); } })); }, // 축약: 바로 인벤토리로
   bItem(o){ return P.item('bcell',40,55,{o,take:el=>this.takeB(el)}); },
   async takeB(el){ const T=this.T; stageMsg(null); await takeItem(el,'bcell'); S.flags.tableBDone=true; T.stage='idle'; T.prog=false; await wait(500); await closePopup(); },
   transferBtn(){ P.btn('융합 세포 혼합물을 배지에 옮기기',b=>run(async()=>{ const T=this.T;
@@ -873,7 +898,8 @@ MODS.table={
     const dish=P.sprite('emptyDish',35,55,11,{o:0}), df=P.sprite('dropperFull',35,36,12,{o:0}); await P.fadeIn(300,dish,df); await wait(500);
     await moveTo(df,65,36,600); await wait(500); await P.fadeOut(300,'medium',df);
     const hm=this.hmItem(0), d2=P.sprite('dropper',65,36,12,{o:0}); await P.fadeIn(300,hm,d2);
-    await wait(1000); await P.fadeOut(300,d2); T.stage='trReady'; stageMsg('융합 세포 혼합물을 배지에 옮겼습니다.'); })); },
+    await wait(1000); await P.fadeOut(300,d2); T.stage='trReady'; stageMsg('융합 세포 혼합물을 배지에 옮겼습니다.');
+    if(QUICK){ await wait(1200); await this.takeHM(hm); } })); },
   hmItem(o){ return P.item('hybridMedium',65,55,{o,take:el=>this.takeHM(el),can:()=>this.T.stage==='trReady'}); },
   async takeHM(el){ const T=this.T; stageMsg(null); await takeItem(el,'hybridMedium'); S.flags.tableTransferDone=true; T.stage='idle'; T.prog=false;
     await wait(500); await closePopup(); await wait(500); setQuest(IQ_H); },
@@ -914,7 +940,8 @@ MODS.incubator={
       stageMsg('배양 완료!'); sfx('done'); I.stage='cDone'; this.doorBtn(); };
   },
   doorBtn(){ P.btn('문 열기',b=>run(async()=>{ const I=this.I; await wait(300); b.remove(); stageMsg(null);
-    await P.fadeOut(300,...stageEl.querySelectorAll('.ill')); const ill=P.illus('incOpen',{o:0}); const it=this.resItem(0); I.stage='cResult'; await P.fadeIn(300,ill,it); })); },
+    await P.fadeOut(300,...stageEl.querySelectorAll('.ill')); const ill=P.illus('incOpen',{o:0}); const it=this.resItem(0); I.stage='cResult'; await P.fadeIn(300,ill,it);
+    if(QUICK){ await wait(500); await this.takeRes(it,I.mode==='hybrid'?'hybridCultured':'cloneCCultured'); } })); },
   resItem(o){ const id=this.I.mode==='hybrid'?'hybridCultured':'cloneCCultured'; return P.item(id,50,33,{o,take:el=>this.takeRes(el,id)}); },
   async takeRes(el,id){ const I=this.I; await takeItem(el,id); S.flags[I.mode==='hybrid'?'hybridCultured':'cloneCCultured']=true;
     I.prog=false; I.stage='idle'; await wait(500); await closePopup(); },
@@ -945,7 +972,8 @@ MODS.fusion={
     const a=fl.animate([{opacity:0},{opacity:1,offset:.45},{opacity:1,offset:.55},{opacity:0}],{duration:1000/SPEED});
     await wait(500); c1.remove(); c2.remove(); const m=P.sprite('cellHybrid',50,50,12,{k:'merged'}); await animDone(a,1000/SPEED,()=>{}); fl.remove();
     stageMsg('융합이 완료되었습니다'); await wait(2000);
-    await P.fadeOut(300,eye,m,note); const ill=P.illus('fusion',{o:0}); F.stage='ready'; await P.fadeIn(300,ill,this.hyItem(0)); })); },
+    await P.fadeOut(300,eye,m,note); const ill=P.illus('fusion',{o:0}); F.stage='ready'; const hy=this.hyItem(0); await P.fadeIn(300,ill,hy);
+    if(QUICK){ await wait(500); await this.take(hy); } })); },
   hyItem(o){ return P.item('hybrid',50,52,{o,take:el=>this.take(el)}); },
   async take(el){ const F=this.F; stageMsg(null); await takeItem(el,'hybrid'); S.flags.fusionDone=true; F.prog=false; F.stage='idle';
     await wait(500); await closePopup(); await wait(300); setQuest(TQ); },
@@ -1005,6 +1033,7 @@ MODS.tester={
   render(){ const X=this.X; this.anim=false;
     if(this.mode==='second'){ P.illus('ext'); X.left.forEach(l=>P.item('clone'+l,50,LV_Y(LETTERS.indexOf(l)),{size:9,o:0,k:'c'+l,take:el=>this.take2(el,'clone'+l)})); return; }
     if(X.stage==='ext'||X.stage==='extReady'){ P.illus('ext'); LETTERS.forEach((l,i)=>{ if(X.placed[l]) P.item('clone'+l,50,LV_Y(i),{size:9,k:'c'+l}); });
+      if(X.stage==='ext'&&QUICK) this.batchBtn();
       if(X.stage==='extReady') this.extBtn(); }
     if(X.stage==='ant'||X.stage==='antReady'){ this.antScene(1); if(X.ant.virus) P.item('virus',32.5,56.8,{k:'av'}); if(X.ant.epithelial) P.item('epithelial',67.5,56.8,{k:'ae'});
       if(X.stage==='antReady') this.inputBtn(); }
@@ -1022,14 +1051,22 @@ MODS.tester={
   accept(id){ const X=this.X; if(this.mode!=='first') return null;
     const m=/^clone([A-E])$/.exec(id);
     if(X.stage==='ext'&&m&&!X.placed[m[1]]) return async()=>{ const l=m[1]; X.placed[l]=true; X.prog=true;
-      await fade(P.item(id,50,LV_Y(LETTERS.indexOf(l)),{size:9,k:'c'+l,o:0}),1);
-      if(LETTERS.every(k=>X.placed[k])){ await wait(500); stageMsg(null); await wait(300); X.stage='extReady'; this.extBtn(); } };
+      await fade(P.item(id,50,LV_Y(LETTERS.indexOf(l)),{size:9,k:'c'+l,o:0}),1); await this.afterExtPlace(); };
     if(X.stage==='ant'&&id==='virus'&&!X.ant.virus) return async()=>{ X.ant.virus=true; await fade(P.item('virus',32.5,56.8,{k:'av',o:0}),1);
       stageMsg(null); await wait(500); stageMsg('대조군으로 사용될 정상적인 세포를 배치하세요.'); };
     if(X.stage==='ant'&&id==='epithelial'&&X.ant.virus&&!X.ant.epithelial) return async()=>{ X.ant.epithelial=true; await fade(P.item('epithelial',67.5,56.8,{k:'ae',o:0}),1);
       await wait(500); stageMsg(null); X.stage='antReady'; this.inputBtn(); };
     return null;
   },
+  async afterExtPlace(){ const X=this.X;
+    if(LETTERS.every(k=>X.placed[k])){ P.remove('batch'); await wait(500); stageMsg(null); await wait(300); X.stage='extReady'; this.extBtn(); } },
+  // 축약: 인벤토리의 클론 A~E를 한 번에 배치
+  batchBtn(){ P.btn('클론 배치하기',b=>run(async()=>{ const X=this.X;
+    const ls=LETTERS.filter(l=>!X.placed[l]&&inv.has('clone'+l)); if(!ls.length) return;
+    deselect(); sfx('place'); b.remove(); await Promise.all(ls.map(l=>inv.remove('clone'+l)));
+    ls.forEach(l=>X.placed[l]=true); X.prog=true;
+    await Promise.all(ls.map(l=>fade(P.item('clone'+l,50,LV_Y(LETTERS.indexOf(l)),{size:9,k:'c'+l,o:0}),1)));
+    await this.afterExtPlace(); }),{k:'batch'}); },
   extBtn(){ P.btn('항체 추출하기',b=>run(async()=>{ const X=this.X;
     await wait(300); b.remove(); await wait(300); await P.fadeOut(300,'ill',...stageEl.querySelectorAll('.pitem')); await wait(300);
     const cl=P.illus('ext',{k:'closed',o:0,arg:true}); await fade(cl,1,300); await wait(500);
@@ -1124,7 +1161,8 @@ MODS.producer={
     stageMsg('추출한 물질을 정제하고 있습니다.'); await wait(3000); stageMsg(null); await wait(500);
     stageMsg('단일클론항체를 치료제로 만들고 있습니다.'); await wait(5000); stageMsg(null); await wait(500); stageMsg('치료제가 완성되었습니다.'); sfx('done'); },
   extractBtn(){ P.btn('단일클론항체 추출하기',b=>run(async()=>{ const Pr=this.Pr;
-    if(Pr.mode==='Y'){ await wait(300); b.remove(); await this.seq('클론 C'); await wait(1000); Pr.stage='icon'; await fade(this.icon(0),1,300); return; }
+    if(Pr.mode==='Y'){ await wait(300); b.remove(); await this.seq('클론 C'); await wait(1000); Pr.stage='icon'; await fade(this.icon(0),1,300);
+      if(QUICK){ await wait(300); await this.finishY(); } return; }   // 축약: 아이콘을 누르지 않아도 바로 염기서열 안내 → 인벤토리
     await wait(300); const bx=makeBox('이 클론에서 항체를 추출하면, 한 번 사용할 만큼의 치료제만 만들 수 있습니다. 계속 진행하시겠습니까?',[['go','진행']],{parent:popupEl,inpop:true});
     await fade(bx.el,1,300); await bx.result; await wait(300); await bx.close(500); await wait(300); b.remove();
     await this.seq('유전자가 편집된 클론 '+S.editLetter); await wait(1000);
@@ -1132,11 +1170,12 @@ MODS.producer={
     await inv.add('treatZ'); S.flags.treatmentZDone=true; Pr.prog=false; Pr.stage='idle'; await wait(500); await closePopup();
     await wait(1000); ending2Prompt(); })); },
   icon(o){ return P.sprite('treatY',50,48,16,{o,k:'ticon',click:()=>this.iconClick()}); },
-  iconClick(){ const Pr=this.Pr; if(Pr.stage!=='icon'||busyN) return;
-    run(async()=>{ const bx=makeBox(`치료제에 들어 있는 항체의 가변부위 염기 서열은 ${SEQ[S.rat]}입니다.\n(다시 확인하려면 인벤토리에 있는 치료제 아이콘을 누르고 설명창을 확인하세요.)`,[['ok','확인']],{parent:popupEl,inpop:true});
-      await fade(bx.el,1,300); await bx.result; await bx.close(300); await wait(300); await P.fadeOut(300,'ticon'); stageMsg(null); await wait(500);
-      await inv.add('treatY'); S.flags.treatmentYDone=true; Pr.prog=false; Pr.stage='idle'; await wait(500); await closePopup();
-      await wait(1000); ending1Prompt(); });
+  iconClick(){ const Pr=this.Pr; if(Pr.stage!=='icon'||busyN) return; run(()=>this.finishY()); },
+  async finishY(){ const Pr=this.Pr;
+    const bx=makeBox(`치료제에 들어 있는 항체의 가변부위 염기 서열은 ${SEQ[S.rat]}입니다.\n(다시 확인하려면 인벤토리에 있는 치료제 아이콘을 누르고 설명창을 확인하세요.)`,[['ok','확인']],{parent:popupEl,inpop:true});
+    await fade(bx.el,1,300); await bx.result; await bx.close(300); await wait(300); await P.fadeOut(300,'ticon'); stageMsg(null); await wait(500);
+    await inv.add('treatY'); S.flags.treatmentYDone=true; Pr.prog=false; Pr.stage='idle'; await wait(500); await closePopup();
+    await wait(1000); ending1Prompt();
   },
 };
 
@@ -1167,7 +1206,8 @@ MODS.editor={
       run(async()=>{ const E=this.E; await wait(500); await bx.close(300); await wait(500); await P.fadeOut(300,'ec'); await wait(500);
         stageMsg((SHORT.on?'크리스퍼 ':'')+'유전자 가위가 클론의 가변부위 DNA를 잘라내고 있습니다.'); await wait(5000); // 축약 버전(A·B)만 '크리스퍼'
         stageMsg('잘린 부위에 새로운 염기서열을 삽입하고 있습니다.'); await wait(5000);
-        stageMsg('유전자 편집이 완료되었습니다.'); sfx('done'); await wait(300); E.stage='ready'; await fade(this.edItem(0),1,300); }); };
+        stageMsg('유전자 편집이 완료되었습니다.'); sfx('done'); await wait(300); E.stage='ready'; const ed=this.edItem(0); await fade(ed,1,300);
+        if(QUICK){ await wait(800); await this.take(ed); } }); };
     bx.inp.addEventListener('keydown',e=>{ if(e.key==='Enter') bx.el.querySelector('.btns .btn').click(); });
     loop();
   },
@@ -1401,7 +1441,7 @@ function frame(t){
   list.push({b:PL.y+3,draw:()=>{ mctx.fillStyle='rgba(0,0,0,.25)'; mctx.fillRect(Math.round(PL.x)-6,Math.round(PL.y)+1,12,3);
     mctx.drawImage(playerSprite(PL.dir,Math.floor(PL.walk)%2),Math.round(PL.x)-PW/2,Math.round(PL.y)+4-PH); }});
   list.sort((a,b)=>a.b-b.b).forEach(o=>o.draw()); drawLighting(t);
-  updateNear(); updateHover(); hlTrack(); updateDisc();
+  updateNear(); updateHover(); hlTrack(); updateDisc(); updateNeed();
   requestAnimationFrame(frame);
 }
 
