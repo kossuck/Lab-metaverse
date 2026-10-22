@@ -936,7 +936,7 @@ MODS.incubator={
     if(I.stage!=='cWait'||id!==need) return null;
     return async()=>{ I.prog=true; I.stage='culturing'; stageMsg(null); const it=P.item(id,50,33,{k:'cin',o:0}); await fade(it,1);
       await wait(1000); await P.fadeOut(300,'ill',it); await fade(P.illus('incClosed',{k:'closed',o:0}),1,300);
-      await wait(500); stageMsg('배양 중'); await wait(5000); stageMsg(null); await wait(500);
+      await wait(500); stageMsg('배양 중'); await wait(QUICK?1200:5000); stageMsg(null); await wait(500); // 축약: '배양 중' 약 1.2초
       stageMsg('배양 완료!'); sfx('done'); I.stage='cDone'; this.doorBtn(); };
   },
   doorBtn(){ P.btn('문 열기',b=>run(async()=>{ const I=this.I; await wait(300); b.remove(); stageMsg(null);
@@ -1155,12 +1155,14 @@ MODS.producer={
   },
   enter(){ if(this.Pr.stage==='icon') stageMsg('치료제가 완성되었습니다.'); },
   accept(id){ const Pr=this.Pr; if(Pr.stage!=='wait') return null;
-    if((Pr.mode==='Y'&&id==='cloneCCultured')||(Pr.mode==='Z'&&id==='edited')) return async()=>{ Pr.prog=true; Pr.stage='placed'; this.extractBtn(); };
+    if((Pr.mode==='Y'&&id==='cloneCCultured')||(Pr.mode==='Z'&&id==='edited')) return async()=>{ Pr.prog=true; Pr.stage='placed';
+      if(QUICK) await this.extract(null); else this.extractBtn(); };   // 축약: 배치하면 '추출하기' 버튼 없이 바로 진행
     return null; },
   async seq(name){ await wait(500); stageMsg(name+'에서 단일클론항체를 추출하고 있습니다.'); await wait(3000); stageMsg(null); await wait(500);
     stageMsg('추출한 물질을 정제하고 있습니다.'); await wait(3000); stageMsg(null); await wait(500);
     stageMsg('단일클론항체를 치료제로 만들고 있습니다.'); await wait(5000); stageMsg(null); await wait(500); stageMsg('치료제가 완성되었습니다.'); sfx('done'); },
-  extractBtn(){ P.btn('단일클론항체 추출하기',b=>run(async()=>{ const Pr=this.Pr;
+  extractBtn(){ P.btn('단일클론항체 추출하기',b=>run(()=>this.extract(b))); },
+  async extract(b){ const Pr=this.Pr; b=b||{remove(){}};
     if(Pr.mode==='Y'){ await wait(300); b.remove(); await this.seq('클론 C'); await wait(1000); Pr.stage='icon'; await fade(this.icon(0),1,300);
       if(QUICK){ await wait(300); await this.finishY(); } return; }   // 축약: 아이콘을 누르지 않아도 바로 염기서열 안내 → 인벤토리
     await wait(300); const bx=makeBox('이 클론에서 항체를 추출하면, 한 번 사용할 만큼의 치료제만 만들 수 있습니다. 계속 진행하시겠습니까?',[['go','진행']],{parent:popupEl,inpop:true});
@@ -1168,7 +1170,7 @@ MODS.producer={
     await this.seq('유전자가 편집된 클론 '+S.editLetter); await wait(1000);
     const ic=P.sprite('treatZ',50,48,16,{o:0}); await fade(ic,1,300); await wait(1000); await P.fadeOut(300,ic); stageMsg(null); await wait(500);
     await inv.add('treatZ'); S.flags.treatmentZDone=true; Pr.prog=false; Pr.stage='idle'; await wait(500); await closePopup();
-    await wait(1000); ending2Prompt(); })); },
+    await wait(1000); ending2Prompt(); },
   icon(o){ return P.sprite('treatY',50,48,16,{o,k:'ticon',click:()=>this.iconClick()}); },
   iconClick(){ const Pr=this.Pr; if(Pr.stage!=='icon'||busyN) return; run(()=>this.finishY()); },
   async finishY(){ const Pr=this.Pr;
@@ -1371,7 +1373,8 @@ mapCv.addEventListener('pointerdown',e=>{
   if(HOVER_ON&&e.pointerType!=='mouse'){ const o=objAt(mx,my);
     if(o){ const now=performance.now();
       if(TAP.obj===o&&now-TAP.t<=300){ TAP.obj=null; HOVER.obj=null; PL.path=null; interact(o); return; }
-      TAP.obj=o; TAP.t=now; HOVER.obj=o; HOVER.until=now+1000; PL.path=null; return; } }
+      TAP.obj=o; TAP.t=now; HOVER.obj=o; HOVER.until=now+1000; PL.path=null; return; }
+    return; }   // 축약 버전 모바일: 빈 바닥을 터치해도 이동하지 않음(이동은 조이패드로)
   PL.path=findPath(mx,my);
 });
 // 사물 이름 미리보기 (축약 버전): 데스크톱은 마우스를 올리면, 모바일은 한 번 누르면 1초 동안
