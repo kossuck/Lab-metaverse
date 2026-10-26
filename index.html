@@ -243,9 +243,11 @@ const SHORT = { on:false, rat:'A' };
 
 // 쇼케이스 버전 설정 — index.html은 false. showcase.html 은 이 줄만 true로 바꾼 복사본(자동 진행 소개 영상처럼 동작)
 const SHOWCASE = false;
+// 간소화 쇼케이스(약 10여 초) — showcase_mini.html 은 SHOWCASE와 이 줄을 모두 true로 바꾼 복사본
+const SHOWCASE_MINI = false;
 
 // AI 도우미 링크 (오른쪽 위 'AI 도우미' 버튼 → 새 탭) — "AI 도우미 링크는 ~야"로 교체
-const AI_HELPER_URL = '';
+const AI_HELPER_URL = 'https://chatgpt.com/share/6adf9726-c4a8-83ee-85ba-81104dc5e150';
 
 // 치료제 투여 영상 링크 (새 탭으로 열림). 비어 있으면 영상 없이 바로 다음 안내로 넘어감
 //  success: 성공 영상(쥐 B·C·D의 '모두에게 투여', 쥐 A의 마지막 투여) / fail: 실패 영상(쥐 A의 '모두에게 투여')
@@ -1749,7 +1751,7 @@ async function scSayIn(text,cls='',ms=500){ const t=document.createElement('div'
   await animDone(a,ms,()=>{ t.style.opacity=1; }); return t; }
 async function scSayOut(t,ms=350){ const a=t.animate([{opacity:1,filter:'blur(0px)'},{opacity:0,filter:'blur(6px)'}],{duration:ms,easing:'ease-in',fill:'forwards'});
   await animDone(a,ms,()=>{ t.style.opacity=0; }); t.remove(); }
-async function scSay(text,cls='',hold=2600){ const t=await scSayIn(text,cls); await scSleep(hold); await scSayOut(t); }
+async function scSay(text,cls='',hold=2600,inMs,outMs){ const t=await scSayIn(text,cls,inMs); await scSleep(hold); await scSayOut(t,outMs); }
 // 장면 전환: 완전히 어두워진 사이에 다음 장면을 준비하고, 반투명 암막 위에 문구를 띄운 뒤 화면을 걷어 냄
 async function scChapter(text,cls,hold,setup,afterSay){ await scVeil(1,350); if(setup) await setup(); await scSleep(80);
   await scVeil(.72,250); await scSay(text,cls,hold); if(afterSay) await afterSay(); await scVeil(0,400); }
@@ -1942,13 +1944,52 @@ async function scRun(){   // 약 1분: 커서·연출은 빠르게, 문구는 �
   }catch(e){ console.error(e); }
 }
 
+// ---- 간소화 버전 (showcase_mini.html, 약 10초) ----
+// 획득·배치 설명과 중간 단계를 빼고 '치료제를 생산하세요' → 세포 융합 → 항원-항체 반응 검사 → 치료제 완성만 보여 준다.
+// 장면 사이 암전 없이 바로 바뀌고, 문구는 옅은 암막 위에 잠깐 떴다가 사라진다.
+async function scCutTo(k,id,prep){ await scIdle(3000); applyState(scState(k)); scZoom(1,0,0,0); const o=OBJECTS.find(q=>q.id===id), sp=standSpot(o);
+  PL.x=sp[0]; PL.y=sp[1]; PL.dir=sp[2]; PL.path=null; if(prep) prep(S.pop[id]);
+  const sp0=SPEED; SPEED=40; await openPopup(MODS[id]); SPEED=sp0; }
+async function scMiniSay(text,hold,cls='',during){ scVeil(.6,160); const t=await scSayIn(text,cls,240); if(during) during(); await scSleep(hold);
+  await Promise.all([scSayOut(t,180),scVeil(0,200)]); }
+const scMiniPrep=async()=>{ await scCutTo('fusion','fusion',F=>{ Object.assign(F,{stage:'place',placed:{cancer:true,bcell:true},prog:true}); }); scVeilEl.style.opacity=.9; };   // 시작 화면 뒤에 비치지 않게 가려 둠
+async function scRunMini(){
+  try{
+    FLOW=false; ambStart(); ambLevel(2,2); SPEED=2.5;
+    // 시작 화면이 걷히면 바로 세포 융합기 화면 위에 큰 문구
+    scHit(); const big=await scSayIn('단일클론항체 치료제를 생산하세요.','big',240); await scSleep(600); await scSayOut(big,180);
+    // 세포 융합: 문구가 뜨는 순간 융합이 시작되어, 문구가 걷히면 세포가 다가가 합쳐지는 장면이 보임
+    await scMiniSay('골수종 세포와 B림프구를 융합하세요.',850,'',()=>{ P.q('btn').click(); setTimeout(()=>scZoom(1.3,...scStageP(50,50),0),450); });
+    await scUntil(()=>P.q('merged'),8000); SPEED=40; await scSleep(400);   // 융합 뒤 남은 연출은 바로 끝냄
+    // 항원-항체 반응 검사
+    ambLevel(3,3);
+    await scCutTo('test','tester',X=>{ MODS.tester.mode='first'; Object.assign(X,{stage:'graph',prog:true,checked:[],selReady:false,
+      placed:{A:true,B:true,C:true,D:true,E:true},ant:{virus:true,epithelial:true}}); });
+    { const r=P.q('screen'), W=worldEl.clientWidth, H=worldEl.clientHeight, z=Math.min(1.45,W/(r.offsetWidth*1.12),H/(r.offsetHeight*1.18));
+      scZoom(z,stageEl.offsetLeft+r.offsetLeft+r.offsetWidth/2,stageEl.offsetTop+r.offsetTop+r.offsetHeight/2,0); }
+    SPEED=10;
+    await scMiniSay('항원 - 항체 반응 검사기에서 가장 적합한 항체를 생산하는 클론을 찾아내세요',1250);
+    scCurShow(true);
+    for(const l of LETTERS){ await scClick(P.q('screen').querySelector(`.well[data-w="${l}"]`),80); await scUntil(()=>!busyN&&!MODS.tester.anim,3000,20); }
+    await scSleep(350); scCurShow(false);
+    // 치료제 완성: 문구가 걷히자마자 생산 시작 → '만들고 있습니다' → '완성되었습니다'
+    SPEED=4;
+    await scCutTo('produce','producer',Pr=>{ Object.assign(Pr,{mode:'Y',stage:'placed',prog:true}); S.inv=Array(8).fill(null); renderInv(); });   // 클론은 이미 넣은 상태
+    scZoom(1.2,...scStageP(50,50),2600);
+    await scMiniSay('단일클론항체 치료제 생산기에서 치료제를 완성하세요.',950);
+    { const b=P.q('btn'); if(b) b.click(); }
+    await scUntil(()=>S.pop.producer.stage==='yReady'&&!busyN,15000); await scSleep(600);
+    await scVeil(1,350); document.body.classList.remove('scMsg'); stageMsg(null);
+  }catch(e){ console.error(e); }
+}
+
 // ---- 시작 화면 · 마지막 화면 ----
 function scTitleCard(){ return new Promise(res=>{
   const el=scMake(`<div class="scCard"><h1>좀비 바이러스 치료제를 만들어라</h1>
     <div class="s2">시뮬레이션을 통해 단일클론항체 치료제를 만들고 효과를 확인해 보자.</div>
     <button class="btn go">시뮬레이션 살펴보기</button></div>`);
   const b=el.querySelector('.go');
-  b.onclick=async()=>{ if(b.disabled) return; b.disabled=true; scAC(); sfx('click'); scVeilEl.style.opacity=1; await scFade(el,0,1200); el.remove(); res(); }; }); }
+  b.onclick=async()=>{ if(b.disabled) return; b.disabled=true; scAC(); sfx('click'); if(SHOWCASE_MINI) scVeil(0,350); else scVeilEl.style.opacity=1; await scFade(el,0,SHOWCASE_MINI?350:1200); el.remove(); res(); }; }); }
 function scEndCard(){ return new Promise(res=>{
   const el=scMake(`<div class="scCard" style="opacity:0"><h1 class="end">좀비 바이러스로부터 학교를 지켜라!</h1>
     <div class="s2">AI 도우미와 협력하여 치료제를 만들 방법을 찾아내세요!</div>
@@ -1965,10 +2006,10 @@ async function scBoot(){
   scLightEl=document.createElement('div'); scLightEl.id='scLight'; worldEl.appendChild(scLightEl); requestAnimationFrame(scTick);
   scCur=scMake('<svg id="scCur" viewBox="0 0 24 28"><path d="M2 2 L2 22 L7.5 17 L11 25 L14.5 23.5 L11 15.8 L18.5 15.8 Z" fill="#d6d6d6" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/></svg>');
   // 생산기: 쇼케이스에서는 '치료제로 만들고 있습니다' → '완성되었습니다' 두 문구만, 그동안 긴장감이 쌓였다가 완성 순간 풀림
-  MODS.producer.seq=async()=>{ await scSleep(200); document.body.classList.add('scMsg'); stageMsg('단일클론항체를 치료제로 만들고 있습니다.'); scBuild(2.8);
-    await scSleep(2800); stageMsg(null); await scSleep(250); scRelease(); stageMsg('치료제가 완성되었습니다.'); };
+  MODS.producer.seq=async()=>{ await scSleep(SHOWCASE_MINI?50:200); document.body.classList.add('scMsg'); stageMsg('단일클론항체를 치료제로 만들고 있습니다.'); const mk=SHOWCASE_MINI?1200:2800; scBuild(mk/1000);
+    await scSleep(mk); stageMsg(null); await scSleep(250); scRelease(); stageMsg('치료제가 완성되었습니다.'); };
   scReset(); setTimeout(layout,50);
-  for(;;){ await scTitleCard(); SC_RAT=RATS[Math.random()*RATS.length|0]; await scRun(); await scEndCard(); scReset(); }
+  for(;;){ if(SHOWCASE_MINI) await scMiniPrep(); await scTitleCard(); SC_RAT=RATS[Math.random()*RATS.length|0]; await (SHOWCASE_MINI?scRunMini():scRun()); await scEndCard(); scReset(); }
 }
 
 /* ---------------- 시작 ---------------- */
