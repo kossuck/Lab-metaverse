@@ -22,7 +22,7 @@ img,canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 button{font-family:var(--font)}
 
 /* 인벤토리 */
-#inv{position:fixed;left:0;top:0;width:100%;height:var(--inv-h);background:var(--inv-bg);z-index:30}
+#inv{position:fixed;left:0;top:var(--top-off,0px);width:100%;height:var(--inv-h);background:var(--inv-bg);z-index:30}
 .slot{position:absolute;background:var(--slot-fill);border:2px solid var(--slot-line);display:flex;align-items:center;justify-content:center}
 .slot img{width:80%;height:80%;cursor:pointer}
 .slot img.sel{outline:2px solid var(--select);outline-offset:1px}
@@ -31,7 +31,7 @@ button{font-family:var(--font)}
 @keyframes needGlow{0%,100%{box-shadow:0 0 0 0 rgba(255,212,0,0);border-color:#fff}50%{box-shadow:0 0 10px 2px rgba(255,212,0,.5);border-color:#ffe680}}
 
 /* 메타버스 영역 */
-#world{position:fixed;left:0;right:0;bottom:0;top:var(--inv-h);background:#060708;overflow:hidden}
+#world{position:fixed;left:0;right:0;bottom:0;top:calc(var(--inv-h) + var(--top-off,0px));background:#060708;overflow:hidden}
 #map{position:absolute;cursor:pointer}
 .olabel{position:absolute;transform:translate(-50%,-100%);width:max-content;background:rgba(0,0,0,.7);color:#fff;padding:3px 9px;font-size:12px;
   white-space:nowrap;pointer-events:none;border-radius:3px;z-index:5}
@@ -42,7 +42,6 @@ button{font-family:var(--font)}
 #pad button:active,#pad button.on{background:rgba(110,110,110,.7)}
 #act{position:absolute;right:20px;bottom:calc(26px + 15pt);display:none;background:var(--pad);border:2px solid #fff;color:#fff;font-size:15px;
   padding:14px 18px;border-radius:8px;z-index:6;touch-action:none}
-body.mobile #pad{display:grid}
 
 /* 가상 팝업창 */
 #popup{position:absolute;inset:0;background:var(--popup-bg);display:none;flex-direction:column;align-items:center;justify-content:center;
@@ -81,7 +80,7 @@ body.mobile #pad{display:grid}
 
 /* 화면 위 문구 */
 /* 좌우 모서리(단계 표시·처음부터 버튼) 폭만큼 비워 두고 그 사이에서 줄바꿈 → 겹치지 않음 */
-#msg{position:fixed;left:50%;top:calc(var(--inv-h) + 16px);transform:translateX(-50%);color:#fff;font-size:clamp(11px,2.4vw,var(--msg-size));padding:6px 18px;
+#msg{position:fixed;left:50%;top:calc(var(--inv-h) + var(--top-off,0px) + 16px);transform:translateX(-50%);color:#fff;font-size:clamp(11px,2.4vw,var(--msg-size));padding:6px 18px;
   background:rgba(28,28,28,.72);box-shadow:0 0 12px 8px rgba(28,28,28,.72);border-radius:10px;z-index:60;pointer-events:none;opacity:0;
   display:none;width:max-content;max-width:min(900px,calc(100vw - 2 * var(--corner-w,0px) - 40px));text-align:center;line-height:1.45;word-break:keep-all}
 
@@ -108,7 +107,7 @@ body.mobile #pad{display:grid}
 #rotate{position:fixed;inset:0;background:#111;z-index:300;display:none;align-items:center;justify-content:center;text-align:center;
   font-size:16px;line-height:1.8;padding:20px}
 @media (orientation:portrait){ body.mobile.ml #rotate{display:flex} }
-#restart{position:absolute;top:8px;right:8px;z-index:6;display:none;background:transparent;border:1px solid rgba(255,255,255,.25);
+#restart{position:absolute;top:8px;right:8px;z-index:6;display:block;visibility:hidden;background:transparent;border:1px solid rgba(255,255,255,.25);
   color:rgba(255,255,255,.45);font-size:clamp(9px,1.3vw,11px);padding:clamp(2px,.4vw,4px) clamp(4px,.8vw,8px);cursor:pointer;min-width:var(--btn-min);min-height:var(--btn-min)}
 #restart:hover{color:#fff;border-color:#fff}
 #verTag{position:absolute;transform:translate(-50%,-50%);z-index:4;color:#ff3434;font-weight:bold;line-height:1;pointer-events:none;
@@ -117,6 +116,17 @@ body.mobile #pad{display:grid}
   padding:clamp(2px,.4vw,4px) clamp(4px,.8vw,8px);white-space:nowrap;
   pointer-events:none;background:rgba(0,0,0,.35);line-height:normal}
 body.a11y #phase{min-height:var(--btn-min);display:flex;align-items:center}
+body.mobile #phase{pointer-events:auto}   /* 모바일: 더블탭으로 2배속 전환 */
+/* AI 도우미 버튼: '처음부터' 왼쪽. 가상 팝업창이 열려 있어도 누를 수 있도록 팝업창보다 위 */
+#aiBtn{position:absolute;top:8px;right:90px;z-index:25;background:rgba(0,0,0,.45);border:1px solid #fff;color:#fff;
+  font-size:clamp(9px,1.3vw,11px);padding:clamp(2px,.4vw,4px) clamp(4px,.8vw,8px);cursor:pointer;min-width:var(--btn-min);min-height:var(--btn-min)}
+#aiBtn:hover{background:rgba(255,255,255,.15)}
+/* 진행 기록: '치료제 개발 단계' 아래로 한 일이 차례로 쌓임 */
+#plog{position:absolute;left:8px;z-index:6;pointer-events:none;background:rgba(0,0,0,.5);border-left:2px solid rgba(255,255,255,.4);
+  padding:4px 8px;font-size:clamp(9px,1.15vw,11px);line-height:1.45;color:#e2e2e2;max-width:min(230px,42vw);overflow:hidden;display:none}
+#plog .one{color:#ffd400}
+#plog .res{padding-left:10px}
+#plog .ok{color:#7ee08a} #plog .ng{color:#ff7070}
 .endr{margin-top:28px;opacity:0}
 .endt{max-width:min(760px,90%);line-height:1.6}
 .ends{font-size:18px;margin-top:22px;letter-spacing:1px;color:#ffd400}
@@ -144,6 +154,48 @@ body.a11y #phase{min-height:var(--btn-min);display:flex;align-items:center}
 #dbg button{background:#222;color:#ddd;border:1px solid #555;font-size:11px;padding:3px 6px;margin:2px;cursor:pointer}
 #dbg select{background:#222;color:#ddd;border:1px solid #555;font-size:11px}
 #dbg .h{color:#ffd400;margin:6px 0 3px}
+
+/* ======================== 쇼케이스 전용 (showcase.html) ======================== */
+/* 메타버스 고유 UI(AI 도우미·처음부터·단계 표시·진행 기록·안내 문구·연출 고지)는 숨김 */
+body.showcase #aiBtn,body.showcase #restart,body.showcase #phase,body.showcase #plog,body.showcase #hint,
+body.showcase .pp-disc,body.showcase .pp-note,body.showcase .isel,body.showcase #pclose{display:none!important}
+body.showcase #msg{visibility:hidden}
+body.showcase.scMsg #msg{visibility:visible;background:rgba(10,10,10,.75);box-shadow:0 0 14px 8px rgba(10,10,10,.75);color:#d8d8d8}
+/* 전체 화면 톤다운: 채도·밝기를 낮춰 어둡고 차갑게 (가상 팝업창 장면은 내용이 보이도록 조금 덜 어둡게) */
+body.showcase #world{filter:brightness(.74) saturate(.45) contrast(1.1);transform-origin:0 0}
+body.showcase.scPop #world{filter:brightness(.84) saturate(.6) contrast(1.05)}
+body.showcase #inv{filter:brightness(.55) saturate(.4)}
+body.showcase #desc{filter:brightness(.85) saturate(.6)}
+#scLight{position:absolute;inset:0;z-index:4;pointer-events:none}   /* 캐릭터 주변만 밝은 손전등 효과 */
+#scVig{position:fixed;inset:0;z-index:450;pointer-events:none;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 42%,rgba(0,0,0,.72) 100%);
+  animation:scBreath 7s ease-in-out infinite}
+@keyframes scBreath{50%{opacity:.8}}
+#scGrain{position:fixed;inset:-50%;z-index:451;pointer-events:none;opacity:.07;animation:scGrain 1s steps(4) infinite;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+@keyframes scGrain{25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-1%)}}
+#scFlick{position:fixed;inset:0;z-index:452;pointer-events:none;background:#000;opacity:0}
+/* 검은 효과(반투명 암막) + 화면 가운데 큰 문구 */
+#scVeil{position:fixed;inset:0;z-index:600;background:#000;opacity:0;pointer-events:none}
+#scSay{position:fixed;inset:0;z-index:605;display:flex;align-items:center;justify-content:center;pointer-events:none;padding:0 7vw;text-align:center}
+#scSay .t{font-size:clamp(19px,3vw,36px);color:#dcdcdc;letter-spacing:.05em;line-height:1.55;opacity:0;
+  text-shadow:0 0 14px rgba(0,0,0,.95),0 0 34px rgba(120,0,0,.35)}
+#scSay .t.big{font-size:clamp(25px,4.4vw,54px);color:#ecd6d6;letter-spacing:.08em;text-shadow:0 0 18px rgba(0,0,0,.95),0 0 44px rgba(170,0,0,.55)}
+#scSay .t.sub{font-size:clamp(16px,2.1vw,25px);color:#b9b9b9;letter-spacing:.32em}
+#scBlock{position:fixed;inset:0;z-index:480;cursor:none}
+#scCur{position:fixed;left:0;top:0;z-index:590;pointer-events:none;width:22px;height:26px;transform:translate(50vw,60vh);opacity:0;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.7))}
+.scRip{position:fixed;z-index:589;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:2px solid rgba(225,225,225,.7);pointer-events:none;
+  animation:scRip .5s ease-out forwards}
+@keyframes scRip{from{transform:scale(.3);opacity:1}to{transform:scale(1.4);opacity:0}}
+/* 시작 화면 · 마지막 화면 */
+.scCard{position:fixed;inset:0;z-index:620;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  background:radial-gradient(ellipse at center,rgba(28,4,4,.9),#000 75%);color:#e8e8e8;padding:24px}
+.scCard h1{font-size:clamp(26px,4.6vw,52px);margin:0 0 16px;color:#e9dede;letter-spacing:.04em;text-shadow:0 0 26px rgba(150,0,0,.6);animation:scFlk 6s linear infinite}
+.scCard h1.end{font-size:clamp(26px,4.6vw,62px);margin-bottom:22px}
+.scCard .s2{font-size:clamp(13px,1.7vw,17px);color:#a9a9a9;line-height:1.7}
+.scCard .go{margin-top:34px;font-size:17px;padding:11px 26px;color:#ddd;border-color:rgba(200,200,200,.6);letter-spacing:.06em}
+.scCard .go:hover{background:rgba(160,0,0,.25);border-color:#d66}
+@keyframes scFlk{0%,41%,45%,79%,100%{opacity:1}42%,44%{opacity:.45}80%{opacity:.7}}
 </style>
 </head>
 <body>
@@ -166,7 +218,9 @@ body.a11y #phase{min-height:var(--btn-min);display:flex;align-items:center}
   </div>
   <div id="cine"></div>
   <button id="restart">↺ 처음부터</button>
+  <button id="aiBtn">AI 도우미</button>
   <div id="phase"></div>
+  <div id="plog"></div>
 </div>
 <div id="msg"><span id="msgT"></span></div>
 <div id="desc"></div>
@@ -187,11 +241,22 @@ const FEATURES = { closeButton:true, save:true, mobileLayout:true, sfx:true, deb
 // short_A.html / short_B.html 은 이 줄만 바꾼 복사본: 배양된 잡종세포를 얻은 시점부터 시작, 실험용 쥐는 rat으로 고정
 const SHORT = { on:false, rat:'A' };
 
-// 엔딩 영상 경로 (index.html과 같은 폴더의 video/ 폴더)
+// 쇼케이스 버전 설정 — index.html은 false. showcase.html 은 이 줄만 true로 바꾼 복사본(자동 진행 소개 영상처럼 동작)
+const SHOWCASE = false;
+
+// AI 도우미 링크 (오른쪽 위 'AI 도우미' 버튼 → 새 탭) — "AI 도우미 링크는 ~야"로 교체
+const AI_HELPER_URL = '';
+
+// 치료제 투여 영상 링크 (새 탭으로 열림). 비어 있으면 영상 없이 바로 다음 안내로 넘어감
+//  success: 성공 영상(쥐 B·C·D의 '모두에게 투여', 쥐 A의 마지막 투여) / fail: 실패 영상(쥐 A의 '모두에게 투여')
+const VIDEO_LINK = { success:'', fail:'' };
+
+// (이전 버전용) 엔딩 영상 경로 — 지금 전체 버전에서는 사용하지 않음
 const VIDEO = { ending1:'video/ending1.mp4', ending2:'video/ending2.mp4', placeholderSec:33 };
 
-// 쥐별 치료제 항체 가변부위 유전자 서열
-const SEQ = { A:'ATGCATGGATAA', B:'ATGTGCAACTAG' };
+// 쥐별 치료제 항체 가변부위 유전자 서열 (12염기 = 시작 코돈 ATG + 코돈 2개 + 종결 코돈)
+const SEQ = { A:'ATGCATGGATAA', B:'ATGTGCAACTAG', C:'ATGAAGTTCTGA', D:'ATGGGTCCATAG' };
+const RATS = ['A','B','C','D'];
 
 // 항원-항체 반응 검사 결과 [좀비 바이러스 결합도, 정상 세포 결합도]
 const TEST_DATA = { A:[42,20], B:[76,28], C:[91,5], D:[65,17], E:[95,63] };
@@ -218,8 +283,10 @@ const ITEMS = {
   medium:{name:'잡종세포 배지', desc:'융합에 성공한 잡종세포만 살아남는 배지. 융합되지 않은 암세포는 이 배지에서 살아남지 못하고, 융합되지 않은 B림프구는 수명이 짧아 스스로 죽는다.'},
   ratA:{name:'실험용 쥐 A', desc:'좀비 바이러스에 감염된 실험용 쥐.\n바이러스에 대한 항체를 만드는 B림프구를 가지고 있다.'},
   ratB:{name:'실험용 쥐 B', desc:'좀비 바이러스에 감염된 실험용 쥐.\n바이러스에 대한 항체를 만드는 B림프구를 가지고 있다.'},
+  ratC:{name:'실험용 쥐 C', desc:'좀비 바이러스에 감염된 실험용 쥐.\n바이러스에 대한 항체를 만드는 B림프구를 가지고 있다.'},
+  ratD:{name:'실험용 쥐 D', desc:'좀비 바이러스에 감염된 실험용 쥐.\n바이러스에 대한 항체를 만드는 B림프구를 가지고 있다.'},
   bcell:{name:'B림프구', desc:'감염된 쥐의 비장에서 추출한 B림프구 클론들. 클론마다 만들 수 있는 항체가 달라서, 이 중 무엇이 좀비 바이러스에 효과적인지는 아직 알 수 없으며 오래 증식하지 못한다.'},
-  virus:{name:'좀비 바이러스 조각', desc:'항원-항체 반응 검사에 쓰기 위해 준비한 좀비 바이러스 S-단백질 조각들의 혼합물. 표적 세포의 수용체와 결합하기 전 상태의 S-단백질 조각과, 수용체와 결합한 뒤 구조가 바뀌어 막 융합 부위가 드러난 상태로 고정한 S-단백질 조각이 섞여 있다. 바이러스 유전체가 없어 감염력은 없다.'},
+  virus:{name:'좀비 바이러스 조각', desc:'항원-항체 반응 검사에 쓰기 위해 준비한 좀비 바이러스 조각들의 혼합물. 바이러스 유전체가 없어 감염력은 없다.'},
   hybrid:{name:'융합 세포 혼합물', desc:'B림프구와 골수종 세포를 융합하여 얻은 세포들. 성공적으로 융합된 잡종세포뿐 아니라 융합되지 않은 B림프구와 암세포도 섞여 있어, 잡종세포 배지에 넣고 배양하여 걸러내야 한다.'},
   hybridMedium:{name:'융합 세포 혼합물이 들어 있는 배지', desc:'융합 세포 혼합물을 옮겨 담은 잡종세포 배지. 세포 배양기에서 배양하면 융합에 성공한 잡종세포만 살아남는다.'},
   hybridCultured:{name:'배양된 잡종세포', desc:'잡종세포 배지에서 살아남아 증식한 잡종세포 클론들. 서로 다른 항체를 만드는 클론들이 섞여있다.'},
@@ -237,10 +304,8 @@ const ITEMS = {
 const TREAT_DESC = SHORT.on ? {   // 축약 버전(A·B)
   A:'실험용 쥐 A가 생산하는 항체가 들어있는 단일클론항체 치료제. 실험용 쥐 B의 항체와 좀비 바이러스를 무력화하는 방법이 다르다.',
   B:'실험용 쥐 B가 생산하는 항체가 들어있는 단일클론항체 치료제. 실험용 쥐 A의 항체와 좀비 바이러스를 무력화하는 방법이 다르다.',
-} : {                                // 전체 버전
-  A:'좀비 바이러스 표면 S-단백질의 수용체 결합 부위에 결합하여, 바이러스가 표적 세포의 수용체에 붙지 못하도록 막는 항체가 들어 있다.',
-  B:'표적 세포의 수용체와 결합한 뒤 구조가 바뀌어 드러난 좀비 바이러스 S-단백질의 융합 부위에 결합하여, 바이러스의 막 융합을 방해하는 항체가 들어 있다.',
-};
+} : Object.fromEntries(RATS.map(x=>[x,     // 전체 버전 (쥐 A~D)
+  `실험용 쥐 ${x}가 생산하는 항체가 들어있는 단일클론항체 치료제. 나머지 실험용 쥐들이 생산하는 항체와는 좀비 바이러스를 무력화하는 방법이 다르다.`]));
 const DONE_TXT='이곳에서 해야 할 작업을 마쳤습니다.', NOTYET_TXT='아직 상호작용할 수 없습니다.';
 
 /* ===================================================================== */
@@ -249,19 +314,23 @@ const $=s=>document.querySelector(s);
 // 축약 버전(A·B)은 1.5배 빠르게. ('아직 상호작용할 수 없습니다' 같은 알림 문구 유지 시간은 그대로)
 const BASE_SPEED=SHORT.on?1.5:1;
 let SPEED=BASE_SPEED;
+// 숨은 2배속 모드: 키보드 '+' (모바일은 왼쪽 위 '치료제 개발 단계' 상자 더블탭)로 켜고 끔. 화면에는 아무 표시도 하지 않음
+let FAST=false;
+function toggleFast(){ FAST=!FAST; SPEED=BASE_SPEED*(FAST?2:1); }
 // 축약 버전(A·B) 빠른 진행: 단계 사이 짧은 대기(≤0.6초)는 크게 줄이고, 문구를 읽는 대기(≥1.2초)는 최소 1.2초를 남긴다
 const QUICK=SHORT.on;
 function waitMs(ms){ if(!QUICK) return ms/SPEED; const k=SPEED/BASE_SPEED;
   if(ms<=600) return ms*0.4/SPEED; if(ms<1200) return ms*0.6/SPEED; return Math.max(1200/k, ms*0.8/SPEED); }
 const wait=ms=>new Promise(r=>setTimeout(r,waitMs(ms)));
-const IS_MOBILE=(()=>{const m=new URLSearchParams(location.search).get('mode');
+const IS_MOBILE=(()=>{ if(SHOWCASE) return false; const m=new URLSearchParams(location.search).get('mode');
   if(m==='mobile')return true; if(m==='desktop')return false;
   return matchMedia('(pointer:coarse)').matches && Math.min(screen.width,screen.height)<900;})();
 document.body.classList.toggle('mobile',IS_MOBILE);
 document.body.classList.toggle('ml',FEATURES.mobileLayout);
 document.body.classList.toggle('a11y',FEATURES.a11y);
 const LETTERS=['A','B','C','D','E'];
-const other=l=>l==='A'?'B':'A';
+const other=l=>l==='A'?'B':'A';   // (축약 버전 전용)
+const unlock=()=>{ lockN=Math.max(0,lockN-1); };
 
 // 애니메이션 완료 대기. 탭이 백그라운드로 가서 화면 갱신이 멈춰도 타이머로 끝을 보장한다.
 function animDone(a,ms,finish){ return new Promise(res=>{ let done=false; const end=()=>{ if(done) return; done=true; finish(); a.cancel(); res(); };
@@ -281,7 +350,8 @@ function moveTo(el,x,y,ms){
 /* ---------------- 효과음 ---------------- */
 let AC=null;
 function sfx(n){
-  if(!FEATURES.sfx) return; const d=SFX[n]; if(!d) return;
+  if(!FEATURES.sfx) return; if(SHOWCASE){ scSfx(n); return; }   // 쇼케이스: 8비트 대신 공포 영화풍 효과음
+  const d=SFX[n]; if(!d) return;
   if(typeof d==='string'){ try{ new Audio(d).play().catch(()=>{}); }catch(e){} return; }
   try{
     AC=AC||new (window.AudioContext||window.webkitAudioContext)();
@@ -299,18 +369,19 @@ function sfx(n){
 }
 
 /* ---------------- 상태 ---------------- */
+// v2: 튜토리얼 없음(바로 '치료제 개발 단계'), 쥐 4마리, 진행 기록(log)
 function freshState(){ return {
-  v:1, phase:'tutorial', skipped:false, inv:Array(8).fill(null), rat:null, editLetter:null,
+  v:2, phase:'dev', skipped:true, inv:Array(8).fill(null), rat:null, editLetter:null, zLetter:null, pickLetter:null, log:[],
   stock:['epithelial','cancer','medium'], flags:{}, quest:null, muted:false, player:null,
   pop:{ table:{stage:'idle',placed:{}}, incubator:{stage:'idle'}, fusion:{stage:'idle',placed:{}}, microscope:{stage:'idle',n:0},
         tester:{stage:'idle',placed:{},ant:{},checked:[],left:['A','B','D','E']}, producer:{stage:'idle'}, editor:{stage:'idle'} }
 };}
 let S=freshState();
-const SAVE_KEY=SHORT.on?'sciLabMeta.v1.short'+SHORT.rat:'sciLabMeta.v1'; // 버전마다 저장을 따로 (같은 사이트에 올려도 섞이지 않음)
+const SAVE_KEY=SHORT.on?'sciLabMeta.v1.short'+SHORT.rat:'sciLabMeta.v2'; // 버전마다 저장을 따로 (같은 사이트에 올려도 섞이지 않음). v2: 새 시나리오
 let NOSAVE=false; // 처음부터 다시 시 새로고침 직전 재저장 방지
-function canSave(){ return FEATURES.save && !NOSAVE && S.phase!=='tutorial' && !busyN && !popupAnim; }
+function canSave(){ return FEATURES.save && !SHOWCASE && !NOSAVE && S.phase!=='tutorial' && !busyN && !popupAnim; }
 function save(){ if(!canSave()) return; try{ S.player={x:PL.x,y:PL.y,dir:PL.dir}; localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){} }
-function loadSave(){ if(!FEATURES.save) return null; try{ const d=JSON.parse(localStorage.getItem(SAVE_KEY)); if(d&&d.v===1) return d; }catch(e){} return null; }
+function loadSave(){ if(!FEATURES.save||SHOWCASE) return null; try{ const d=JSON.parse(localStorage.getItem(SAVE_KEY)); if(d&&d.v===freshState().v) return d; }catch(e){} return null; }
 function clearSave(){ NOSAVE=true; try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
 
 /* ---------------- 픽셀 그리기 도구 ---------------- */
@@ -355,7 +426,7 @@ function drawIcon(c,id,L){
   case 'virus': dish(c,'#eef1f2'); // 페트리 접시 위의 잘게 쪼개진 초록색 S-단백질 조각들
     [[4,5,2,2],[8,4,2,1],[10,6,2,2],[5,8,1,2],[7,7,2,2],[11,9,1,2],[4,10,2,1],[8,10,2,2],[6,12,2,1],[10,12,1,1],[12,7,1,1],[6,4,1,1]].forEach(([x,y,w,h],i)=>{
       R(c,x,y,w,h,['#3f8a35','#5aa94a','#2e6e28'][i%3]); if(w>1&&h>1) R(c,x,y,1,1,'#9ad884'); }); break;
-  case 'ratA': case 'ratB': spr(c,RAT,{k:'#7a7a7a',w:'#f7f7f7',p:'#e9a3b0',r:'#d23a3a'},0,1); badge(c,id.slice(-1)); break;
+  case 'ratA': case 'ratB': case 'ratC': case 'ratD': spr(c,RAT,{k:'#7a7a7a',w:'#f7f7f7',p:'#e9a3b0',r:'#d23a3a'},0,1); badge(c,id.slice(-1)); break;
   case 'cloneA':case 'cloneB':case 'cloneC':case 'cloneD':case 'cloneE': dish(c,'#f1ecef'); cellAb(c,8,8.5,2.6,'#d8a6e2','#7b4290',id.slice(-1)); badge(c,id.slice(-1)); break;
   case 'cloneCCultured': flask(c,'#e47f86'); [[3,10],[5,11],[7,10],[9,11],[10,10]].forEach(([x,y])=>{R(c,x,y,1,1,'#7a3f8e');R(c,x+1,y-1,1,1,ABCOL.C);}); badge(c,'C'); break;
   case 'edited': dish(c,'#f1ecef'); cellAb(c,7,9,2.6,'#d8a6e2','#7b4290',null);
@@ -378,14 +449,16 @@ function drawIcon(c,id,L){
   }
 }
 const ICACHE={};
-function iconLetter(id){ return id==='treatY'?S.rat:id==='treatZ'?(S.rat?other(S.rat):null):id==='edited'?S.editLetter:null; }
+// 1회용 치료제 알파벳: 전체 버전은 유전자 편집 때 입력한 염기서열의 주인(쥐 B·C·D), 축약 버전은 반대쪽 쥐
+const zLetter=()=>SHORT.on?(S.rat?other(S.rat):null):S.zLetter;
+function iconLetter(id){ return id==='treatY'?S.rat:id==='treatZ'?zLetter():id==='edited'?S.editLetter:null; }
 function iconURL(id){ const L=iconLetter(id)||''; const k=id+'|'+L; if(ICACHE[k]) return ICACHE[k];
   const cv=document.createElement('canvas'); cv.width=cv.height=16; drawIcon(cv.getContext('2d'),id,L); return ICACHE[k]=cv.toDataURL(); }
 function itemName(id){ if(id==='treatY') return '좀비 바이러스 치료제 '+(S.rat||'');
-  if(id==='treatZ') return '1회용 좀비 바이러스 치료제 '+(S.rat?other(S.rat):'');
+  if(id==='treatZ') return '1회용 좀비 바이러스 치료제 '+(zLetter()||'');
   if(id==='edited') return '유전자가 편집된 클론 '+(S.editLetter||''); return (ITEMS[id]||{}).name||id; }
 function itemDesc(id){ if(id==='treatY') return S.rat?TREAT_DESC[S.rat]+'\n항체 가변부위 DNA의 염기서열: '+SEQ[S.rat]:''; // 1회용(Z)에는 서열 없음
-  if(id==='treatZ') return S.rat?TREAT_DESC[other(S.rat)]:'';
+  if(id==='treatZ') return zLetter()?TREAT_DESC[zLetter()]:'';
   if(id==='edited') return '항체 가변부위 DNA를 새로운 염기서열로 바꾼 클론 '+(S.editLetter||'')+'.'; return (ITEMS[id]||{}).desc||''; }
 
 /* ---------------- 팝업 일러스트 (200×125 도트) ---------------- */
@@ -694,7 +767,7 @@ function select(el,id,mode,action){
     b.onclick=e=>{ e.stopPropagation(); sfx('click'); if(mode==='take'){ deselect(); action(); } else placeSelected(id); };
     const w=document.createElement('div'); w.className='db'; w.appendChild(b); descEl.appendChild(w); }
   descEl.style.display='block'; descEl.style.left='0px'; descEl.style.top='0px';
-  const r=el.getBoundingClientRect(), dw=descEl.offsetWidth, dh=descEl.offsetHeight, invH=invEl.offsetHeight;
+  const r=el.getBoundingClientRect(), dw=descEl.offsetWidth, dh=descEl.offsetHeight, invH=invEl.getBoundingClientRect().bottom;
   let top=r.top-dh-8; if(top<invH+4) top=r.bottom+8; if(top+dh>innerHeight-4) top=Math.max(invH+4,innerHeight-dh-4);
   const left=Math.min(innerWidth-dw-8,Math.max(8,r.left+r.width/2-dw/2));
   descEl.style.left=left+'px'; descEl.style.top=top+'px';
@@ -735,11 +808,27 @@ function makeBox(text,btns,{parent=document.body,input=false,inpop=false}={}){
   let inp=null; if(input){ inp=document.createElement('input'); inp.autocomplete='off'; inp.spellcheck=false; el.appendChild(inp); }
   const bw=document.createElement('div'); bw.className='btns'; el.appendChild(bw);
   let resolve; const p=new Promise(r=>resolve=r);
-  btns.forEach(([k,label])=>{ const b=document.createElement('button'); b.className='btn'; b.textContent=label; b.onclick=e=>{e.stopPropagation(); sfx('click'); resolve(k);}; bw.appendChild(b); });
+  // 버튼: [키, 글자, (선택) 누르는 순간 바로 실행할 함수 — 새 탭 열기처럼 클릭과 동시에 해야 하는 일]
+  btns.forEach(([k,label,fn])=>{ const b=document.createElement('button'); b.className='btn'; b.textContent=label; b.onclick=e=>{e.stopPropagation(); sfx('click'); if(fn) fn(); resolve(k);}; bw.appendChild(b); });
   parent.appendChild(el); if(!inpop) boxN++;
-  return {el,inp,result:p,async close(ms=300){ await fade(el,0,ms); el.remove(); if(!inpop) boxN--; }};
+  return {el,inp,result:p,async close(ms=300){ await fade(el,0,ms); const on=el.isConnected; el.remove(); if(!inpop&&on) boxN--; }};
 }
 async function textBox(text,btns){ const b=makeBox(text,btns); fade(b.el,1,300); const k=await b.result; await b.close(300); return k; }
+// 화면 가운데 상자 하나에서 문구·버튼만 바꿔 가며 이어지는 안내 (상자가 닫혔다 다시 열리지 않고 내용만 전환)
+function dialog(){
+  let el=null, tx=null, bw=null;
+  const fill=(text,btns,res)=>{ tx.textContent=text; bw.innerHTML=''; bw.style.display=btns.length?'flex':'none';
+    btns.forEach(([k,label,fn])=>{ const b=document.createElement('button'); b.className='btn'; b.textContent=label;
+      b.onclick=e=>{ e.stopPropagation(); if(b.dataset.used) return; b.dataset.used='1'; sfx('click'); if(fn) fn(); res(k); }; bw.appendChild(b); }); };
+  return {
+    show(text,btns=[]){ return new Promise(async res=>{
+      if(!el){ el=document.createElement('div'); el.className='box'; tx=document.createElement('div'); bw=document.createElement('div'); bw.className='btns';
+        el.append(tx,bw); document.body.appendChild(el); boxN++; fill(text,btns,res); await fade(el,1,300); }
+      else { await Promise.all([fade(tx,0,150),fade(bw,0,150)]); fill(text,btns,res); await Promise.all([fade(tx,1,150),fade(bw,1,150)]); }
+      if(!btns.length) res(null); }); },
+    async close(){ if(!el) return; const e=el; el=null; await fade(e,0,300); const on=e.isConnected; e.remove(); if(on) boxN=Math.max(0,boxN-1); },
+  };
+}
 
 /* ---------------- 팝업 ---------------- */
 const popupEl=$('#popup'), stageEl=$('#stage'), actsEl=$('#acts'), pcloseEl=$('#pclose');
@@ -771,7 +860,15 @@ const P={
   fadeOut(ms,...els){ return Promise.all(els.map(e=>typeof e==='string'?P.q(e):e).filter(Boolean).map(e=>fade(e,0,ms).then(()=>e.remove()))); },
   fadeIn(ms,...els){ return Promise.all(els.filter(Boolean).map(e=>fade(e,1,ms))); },
 };
+// 사물 앞에 서는 자리 (사물 바로 아래쪽 → 옆쪽 순서로 비어 있는 곳)
+function standSpot(o){ const cx=o.fx+o.fw/2, by=o.fy+o.fh;
+  const c=[[cx,by+8],[cx-14,by+8],[cx+14,by+8],[cx-26,by+8],[cx+26,by+8],[cx,by+20],[o.fx-8,o.fy+o.fh/2],[o.fx+o.fw+8,o.fy+o.fh/2]];
+  for(const [x,y] of c) if(!blocked(x,y)) return [x,y,y>by?'up':(x<o.fx?'right':'left')];
+  return null; }
+const objOfMod=mod=>OBJECTS.find(o=>MODS[o.id]===mod);
 async function openPopup(mod){
+  // 모바일(전체 버전): 가상 팝업창이 열리면 연출로 캐릭터가 그 사물 앞으로 이동
+  if(MOBILE_TAP){ const o=objOfMod(mod), sp=o&&standSpot(o); if(sp){ PL.x=sp[0]; PL.y=sp[1]; PL.dir=sp[2]; PL.path=null; } }
   deselect(); popupMod=mod; popSess++; popupAnim=true; P.clear(); mod.render();
   popupEl.style.display='flex'; sfx('open'); msgUpdate(); updateX(); await slide(true); popupAnim=false; updateX(); if(mod.enter) mod.enter();
 }
@@ -843,16 +940,19 @@ const MODS={};
 /* ---- 실험용 쥐 사육장 ---- */
 MODS.cage={
   tryOpen(){ if(S.rat) return flash('이미 데려갈 쥐를 선택했습니다.',2000); openPopup(this); },
-  render(){ P.illus('cage'); [['ratA',36],['ratB',64]].forEach(([id,x])=>P.item(id,x,63,{size:13,take:el=>this.take(el,id)})); },
-  enter(){ later(300,()=>stageMsg('당신은 두 마리의 쥐 중 한 마리만 데려갈 수 있습니다.')); },
-  async take(el,id){ S.rat=id.slice(-1); stageMsg(null); const p=takeItem(el,id); await wait(500); await Promise.all([p,closePopup()]); },
+  render(){ P.illus('cage');
+    if(SHORT.on){ [['ratA',36],['ratB',64]].forEach(([id,x])=>P.item(id,x,63,{size:13,take:el=>this.take(el,id)})); return; }
+    // 쥐 4마리: 사육장 안에 고르게, 앞뒤로 살짝 엇갈리게
+    [['ratA',22,61],['ratB',41,65],['ratC',59,61],['ratD',78,65]].forEach(([id,x,y])=>P.item(id,x,y,{size:12,take:el=>this.take(el,id)})); },
+  enter(){ later(300,()=>stageMsg(SHORT.on?'당신은 두 마리의 쥐 중 한 마리만 데려갈 수 있습니다.':'당신은 네 마리의 쥐 중 한 마리만 데려갈 수 있습니다.')); },
+  async take(el,id){ S.rat=id.slice(-1); logAdd('rat'); stageMsg(null); const p=takeItem(el,id); await wait(500); await Promise.all([p,closePopup()]); },
 };
 
 /* ---- 생물학적 위해물질 보관함 ---- */
 MODS.hazard={
   tryOpen(){ if(S.flags.hazardDone) return flash(DONE_TXT); openPopup(this); },
   render(){ P.illus('hazard'); P.item('virus',50,47,{take:el=>this.take(el)}); },
-  async take(el){ await takeItem(el,'virus'); S.flags.hazardDone=true; await wait(500); await closePopup(); },
+  async take(el){ await takeItem(el,'virus'); S.flags.hazardDone=true; logAdd('virus'); await wait(500); await closePopup(); },
 };
 
 /* ---- 실험 테이블 ---- */
@@ -861,7 +961,7 @@ MODS.table={
   get T(){ return S.pop.table; },
   tryOpen(){ const T=this.T;
     if(T.prog) return openPopup(this);
-    if(inv.has('ratA')||inv.has('ratB')){ T.stage='ratWait'; return openPopup(this); }
+    if(S.rat&&inv.has('rat'+S.rat)){ T.stage='ratWait'; return openPopup(this); }
     if(hasAll(['hybrid','medium'])){ if(S.quest===TQ) setQuest(null); T.stage='trWait'; T.placed={}; return openPopup(this); }
     if(S.flags.tableTransferDone||inv.has('bcell')) return flash(DONE_TXT);
     flash(NOTYET_TXT);
@@ -890,7 +990,7 @@ MODS.table={
     stageMsg('B림프구 클론들이 추출되었습니다'); await wait(500); await P.fadeOut(300,'rat',syr); await wait(500);
     T.stage='bReady'; const bi=this.bItem(0); await fade(bi,1); if(QUICK){ await wait(800); await this.takeB(bi); } })); }, // 축약: 바로 인벤토리로
   bItem(o){ return P.item('bcell',40,55,{o,take:el=>this.takeB(el)}); },
-  async takeB(el){ const T=this.T; stageMsg(null); await takeItem(el,'bcell'); S.flags.tableBDone=true; T.stage='idle'; T.prog=false; await wait(500); await closePopup(); },
+  async takeB(el){ const T=this.T; stageMsg(null); await takeItem(el,'bcell'); S.flags.tableBDone=true; logAdd('bcell'); T.stage='idle'; T.prog=false; await wait(500); await closePopup(); },
   transferBtn(){ P.btn('융합 세포 혼합물을 배지에 옮기기',b=>run(async()=>{ const T=this.T;
     await wait(300); b.remove(); await wait(300);
     const d1=P.sprite('dropper',35,36,12,{o:0}); await fade(d1,1); await wait(500);
@@ -901,7 +1001,7 @@ MODS.table={
     await wait(1000); await P.fadeOut(300,d2); T.stage='trReady'; stageMsg('융합 세포 혼합물을 배지에 옮겼습니다.');
     if(QUICK){ await wait(1200); await this.takeHM(hm); } })); },
   hmItem(o){ return P.item('hybridMedium',65,55,{o,take:el=>this.takeHM(el),can:()=>this.T.stage==='trReady'}); },
-  async takeHM(el){ const T=this.T; stageMsg(null); await takeItem(el,'hybridMedium'); S.flags.tableTransferDone=true; T.stage='idle'; T.prog=false;
+  async takeHM(el){ const T=this.T; stageMsg(null); await takeItem(el,'hybridMedium'); S.flags.tableTransferDone=true; logAdd('transfer'); T.stage='idle'; T.prog=false;
     await wait(500); await closePopup(); await wait(500); setQuest(IQ_H); },
 };
 
@@ -931,7 +1031,7 @@ MODS.incubator={
   },
   async takeStock(el,id){ S.stock=S.stock.filter(x=>x!==id);
     if(S.phase==='tutorial'){ TUT.canTake=false; const p=takeItem(el,id); tutAfterTake(); await p; return; }
-    await takeItem(el,id); if(!S.stock.length){ await wait(500); await closePopup(); } },
+    await takeItem(el,id); if(!S.stock.length){ logAdd('mats'); await wait(500); await closePopup(); } },
   accept(id){ const I=this.I; const need=I.mode==='hybrid'?'hybridMedium':'cloneC';
     if(I.stage!=='cWait'||id!==need) return null;
     return async()=>{ I.prog=true; I.stage='culturing'; stageMsg(null); const it=P.item(id,50,33,{k:'cin',o:0}); await fade(it,1);
@@ -943,7 +1043,7 @@ MODS.incubator={
     await P.fadeOut(300,...stageEl.querySelectorAll('.ill')); const ill=P.illus('incOpen',{o:0}); const it=this.resItem(0); I.stage='cResult'; await P.fadeIn(300,ill,it);
     if(QUICK){ await wait(500); await this.takeRes(it,I.mode==='hybrid'?'hybridCultured':'cloneCCultured'); } })); },
   resItem(o){ const id=this.I.mode==='hybrid'?'hybridCultured':'cloneCCultured'; return P.item(id,50,33,{o,take:el=>this.takeRes(el,id)}); },
-  async takeRes(el,id){ const I=this.I; await takeItem(el,id); S.flags[I.mode==='hybrid'?'hybridCultured':'cloneCCultured']=true;
+  async takeRes(el,id){ const I=this.I; await takeItem(el,id); S.flags[I.mode==='hybrid'?'hybridCultured':'cloneCCultured']=true; logAdd(I.mode==='hybrid'?'culture':'cultureC');
     I.prog=false; I.stage='idle'; await wait(500); await closePopup(); },
 };
 
@@ -975,7 +1075,7 @@ MODS.fusion={
     await P.fadeOut(300,eye,m,note); const ill=P.illus('fusion',{o:0}); F.stage='ready'; const hy=this.hyItem(0); await P.fadeIn(300,ill,hy);
     if(QUICK){ await wait(500); await this.take(hy); } })); },
   hyItem(o){ return P.item('hybrid',50,52,{o,take:el=>this.take(el)}); },
-  async take(el){ const F=this.F; stageMsg(null); await takeItem(el,'hybrid'); S.flags.fusionDone=true; F.prog=false; F.stage='idle';
+  async take(el){ const F=this.F; stageMsg(null); await takeItem(el,'hybrid'); S.flags.fusionDone=true; logAdd('fusion'); F.prog=false; F.stage='idle';
     await wait(500); await closePopup(); await wait(300); setQuest(TQ); },
 };
 
@@ -1013,7 +1113,7 @@ MODS.microscope={
       stageMsg(null); await fade(P.illus('micro',{o:0}),1,300); await wait(500);
       stageMsg('성공적으로 융합된 5종류의 잡종세포 클론을 얻었습니다.'); await wait(500);
       await Promise.all(LETTERS.map(l=>inv.add('clone'+l))); sfx('done'); await wait(1000);
-      stageMsg(null); S.flags.microscopeDone=true; Mi.prog=false; Mi.stage='idle'; await closePopup(); });
+      stageMsg(null); S.flags.microscopeDone=true; logAdd('split'); Mi.prog=false; Mi.stage='idle'; await closePopup(); });
   },
 };
 
@@ -1025,7 +1125,8 @@ MODS.tester={
   tryOpen(){ const X=this.X;
     if(S.flags.testerSecondDone) return flash(DONE_TXT);
     if(X.prog){ this.mode='first'; return openPopup(this); }
-    if(inv.has('treatY')){ this.mode='second'; return openPopup(this); }
+    // 두 번째 방문(유전자 편집용 클론 고르기): 전체 버전은 '모두에게 투여'에서 실패한(쥐 A) 경우에만
+    if(inv.has('treatY')&&(SHORT.on||(S.flags.allFail&&S.flags.allAck))){ this.mode='second'; return openPopup(this); }
     if(S.flags.testerDone) return flash(DONE_TXT);
     if(hasAll(TESTER_NEED)){ this.mode='first'; X.stage='ext'; X.placed={}; X.ant={}; X.checked=[]; X.selReady=false; return openPopup(this); }
     flash(NOTYET_TXT);
@@ -1133,8 +1234,8 @@ MODS.tester={
   pickScene(o){ return LETTERS.map((l,i)=>{ const isC=l===ANSWER; const el=P.item('clone'+l,50,LV_Y(i),{size:9,o,k:'c'+l,take:isC?(el=>this.takeC(el)):null});
     if(isC&&o) el.classList.add('gold'); return el; }); },
   async takeC(el){ const X=this.X; await takeItem(el,'clone'+ANSWER); await wait(300); stageMsg(null); await wait(500);
-    S.flags.testerDone=true; X.prog=false; X.stage='idle'; await closePopup(); await wait(1000); setQuest(IQ_C); },
-  async take2(el,id){ const X=this.X; await takeItem(el,id); X.left=X.left.filter(l=>'clone'+l!==id); await wait(500); stageMsg(null);
+    S.flags.testerDone=true; logAdd('test'); X.prog=false; X.stage='idle'; await closePopup(); await wait(1000); setQuest(IQ_C); },
+  async take2(el,id){ const X=this.X; await takeItem(el,id); X.left=X.left.filter(l=>'clone'+l!==id); S.pickLetter=id.slice(-1); logAdd('pick'); await wait(500); stageMsg(null);
     S.flags.testerSecondDone=true; await closePopup(); },
 };
 
@@ -1152,10 +1253,13 @@ MODS.producer={
   render(){ const Pr=this.Pr; P.illus('prod');
     if(Pr.stage==='placed') this.extractBtn();
     if(Pr.stage==='icon') this.icon(1);
+    if(Pr.stage==='yReady') this.yItem(1);
   },
-  enter(){ if(this.Pr.stage==='icon') stageMsg('치료제가 완성되었습니다.'); },
+  enter(){ if(this.Pr.stage==='icon'||this.Pr.stage==='yReady') stageMsg('치료제가 완성되었습니다.'); },
   accept(id){ const Pr=this.Pr; if(Pr.stage!=='wait') return null;
     if((Pr.mode==='Y'&&id==='cloneCCultured')||(Pr.mode==='Z'&&id==='edited')) return async()=>{ Pr.prog=true; Pr.stage='placed';
+      // 배치한 아이템이 치료제가 나오는 자리에 올라갔다가 약 1초 뒤 사라짐 (다른 팝업창처럼 '넣었다'는 것이 보이게)
+      const it=P.item(id,50,48,{size:16,k:'pin',o:0}); await fade(it,1,300); await wait(1000); await P.fadeOut(300,it);
       if(QUICK) await this.extract(null); else this.extractBtn(); };   // 축약: 배치하면 '추출하기' 버튼 없이 바로 진행
     return null; },
   async seq(name){ await wait(500); stageMsg(name+'에서 단일클론항체를 추출하고 있습니다.'); await wait(3000); stageMsg(null); await wait(500);
@@ -1163,14 +1267,20 @@ MODS.producer={
     stageMsg('단일클론항체를 치료제로 만들고 있습니다.'); await wait(5000); stageMsg(null); await wait(500); stageMsg('치료제가 완성되었습니다.'); sfx('done'); },
   extractBtn(){ P.btn('단일클론항체 추출하기',b=>run(()=>this.extract(b))); },
   async extract(b){ const Pr=this.Pr; b=b||{remove(){}};
-    if(Pr.mode==='Y'){ await wait(300); b.remove(); await this.seq('클론 C'); await wait(1000); Pr.stage='icon'; await fade(this.icon(0),1,300);
-      if(QUICK){ await wait(300); await this.finishY(); } return; }   // 축약: 아이콘을 누르지 않아도 바로 염기서열 안내 → 인벤토리
+    if(Pr.mode==='Y'){ await wait(300); b.remove(); await this.seq('클론 C'); await wait(1000);
+      if(SHORT.on){ Pr.stage='icon'; await fade(this.icon(0),1,300); if(QUICK){ await wait(300); await this.finishY(); } return; }
+      // 전체 버전: 완성된 치료제가 팝업창 안에 나타나고, '획득하기'를 눌러야 인벤토리로 → 팝업창 자동으로 닫힘
+      Pr.stage='yReady'; await fade(this.yItem(0),1,300); return; }
     await wait(300); const bx=makeBox('이 클론에서 항체를 추출하면, 한 번 사용할 만큼의 치료제만 만들 수 있습니다. 계속 진행하시겠습니까?',[['go','진행']],{parent:popupEl,inpop:true});
     await fade(bx.el,1,300); await bx.result; await wait(300); await bx.close(500); await wait(300); b.remove();
     await this.seq('유전자가 편집된 클론 '+S.editLetter); await wait(1000);
     const ic=P.sprite('treatZ',50,48,16,{o:0}); await fade(ic,1,300); await wait(1000); await P.fadeOut(300,ic); stageMsg(null); await wait(500);
-    await inv.add('treatZ'); S.flags.treatmentZDone=true; Pr.prog=false; Pr.stage='idle'; await wait(500); await closePopup();
-    await wait(1000); ending2Prompt(); },
+    await inv.add('treatZ'); S.flags.treatmentZDone=true; logAdd('treatZ'); Pr.prog=false; Pr.stage='idle'; await wait(500); await closePopup();
+    await wait(1000); if(SHORT.on) ending2Prompt(); else finalFlow(); },
+  yItem(o){ return P.item('treatY',50,48,{size:16,o,k:'ty',take:el=>this.takeY(el)}); },
+  async takeY(el){ const Pr=this.Pr; stageMsg(null); await takeItem(el,'treatY'); S.flags.treatmentYDone=true; logAdd('treatY'); Pr.prog=false; Pr.stage='idle';
+    await wait(500); await closePopup(); await wait(600); treatFlow(); },
+  // (축약 버전 전용) 아이콘을 누르면 염기서열 안내 → 인벤토리
   icon(o){ return P.sprite('treatY',50,48,16,{o,k:'ticon',click:()=>this.iconClick()}); },
   iconClick(){ const Pr=this.Pr; if(Pr.stage!=='icon'||busyN) return; run(()=>this.finishY()); },
   async finishY(){ const Pr=this.Pr;
@@ -1203,7 +1313,10 @@ MODS.editor={
     bx.el.style.opacity=o; if(!o) fade(bx.el,1,ms);
     const loop=async()=>{ for(;;){ await bx.result.then(()=>{});
         const v=bx.inp.value.toUpperCase().replace(/[^ATGC]/g,'');
-        if(v===SEQ[other(S.rat)]) break; sfx('error'); flash('올바른 염기서열이 아닙니다.',2000);
+        if(SHORT.on){ if(v===SEQ[other(S.rat)]) break; }
+        else { // 전체 버전: 자기 쥐를 뺀 나머지 쥐(A라면 B·C·D) 치료제의 염기서열 중 아무거나 → 그 쥐의 알파벳이 1회용 치료제 알파벳
+          const hit=RATS.find(x=>x!==S.rat&&v===SEQ[x]); if(hit){ S.zLetter=hit; break; } }
+        sfx('error'); flash('올바른 염기서열이 아닙니다.',2000);
         bx.result=new Promise(r=>{ bx.el.querySelector('.btns .btn').onclick=e=>{e.stopPropagation(); sfx('click'); r('ok');}; }); }
       run(async()=>{ const E=this.E; await wait(500); await bx.close(300); await wait(500); await P.fadeOut(300,'ec'); await wait(500);
         stageMsg((SHORT.on?'크리스퍼 ':'')+'유전자 가위가 클론의 가변부위 DNA를 잘라내고 있습니다.'); await wait(5000); // 축약 버전(A·B)만 '크리스퍼'
@@ -1214,7 +1327,7 @@ MODS.editor={
     loop();
   },
   edItem(o){ return P.item('edited',50,61.6,{o,take:el=>this.take(el)}); },
-  async take(el){ const E=this.E; await takeItem(el,'edited'); await wait(300); stageMsg(null); S.flags.geneEditDone=true; E.prog=false; E.stage='idle'; await closePopup(); },
+  async take(el){ const E=this.E; await takeItem(el,'edited'); await wait(300); stageMsg(null); S.flags.geneEditDone=true; logAdd('edit'); E.prog=false; E.stage='idle'; await closePopup(); },
 };
 
 /* ---------------- 엔딩 ---------------- */
@@ -1278,6 +1391,83 @@ async function askRestart(){ if(boxN) return;
   const k=await textBox('처음부터 다시 시작할까요?\n지금까지의 진행 상황이 모두 지워집니다.',[['no','취소'],['yes','처음부터 다시']]);
   if(k==='yes'){ clearSave(); location.reload(); } }
 const restartEl=$('#restart'); restartEl.onclick=e=>{ e.stopPropagation(); askRestart(); };
+
+/* ---------------- 시작 안내 · 치료제 투여 흐름 (전체 버전) ---------------- */
+async function startIntro(){
+  lockN++; await textBox('AI 도우미와 협력하여 단일클론항체 치료제를 만드세요.',[['start','시작하기']]);
+  S.flags.started=true; unlock(); save();
+}
+// 영상 링크: 버튼을 누르는 순간 새 탭으로 연다 (링크가 비어 있거나 쇼케이스면 열지 않음)
+function openVideo(kind){ const u=VIDEO_LINK[kind]; if(!u||SHOWCASE) return; try{ window.open(u,'_blank','noopener'); }catch(e){} }
+let FLOW=false;
+// 치료제 완성 후: 한 명에게 투여 → 성공 → 모두에게 투여 → (쥐 A) 변이로 실패 / (쥐 B·C·D) 성공. 새로고침해도 이어서 진행
+async function treatFlow(){
+  if(FLOW) return; FLOW=true; lockN++; const d=dialog();
+  try{
+    if(!S.flags.oneOK){
+      await d.show('완성한 치료제를 한 명의 감염자에게 투여하여 효과를 확인해 봅시다.',[['go','투여하기']]);
+      logAdd('one'); await d.show('투여 중...'); await wait(2000);
+      S.flags.oneOK=true; renderLog(); sfx('done'); save();
+      await d.show('당신이 만든 치료제로 감염자를 치료하는 데 성공했습니다!',[['next','다음']]);
+    }
+    if(!S.flags.allDone){
+      const fail=S.rat==='A';   // 변이는 쥐 A 항체가 결합하는 부위에만 일어남
+      await d.show('이제 모든 감염자들에게 치료제를 투여해 봅시다.',[['go','모두에게 치료제 투여하기',()=>openVideo(fail?'fail':'success')]]);
+      S.flags.allDone=true; S.flags.allFail=fail; logAdd('all'); sfx(fail?'error':'done'); save();
+    }
+    if(!S.flags.allAck){
+      if(S.flags.allFail) await d.show('마지막 한 명의 감염자에게서 바이러스의 변이가 발생하여 당신이 만든 치료제로 치료하지 못하였습니다.',[['ok','해결책을 생각해 보자.']]);
+      else await d.show('당신이 만든 치료제로 모든 감염자를 치료하는 데 성공하였습니다!',[['ok','다음']]);
+      S.flags.allAck=true; save();
+    }
+  } finally { await d.close(); unlock(); FLOW=false; save(); }
+}
+// (쥐 A) 1회용 치료제 완성 후: 마지막 감염자에게 투여 → 성공 영상 링크 + 성공 안내
+async function finalFlow(){
+  if(FLOW) return; FLOW=true; lockN++; const d=dialog();
+  try{
+    if(!S.flags.finalDone){
+      await d.show('유전자 편집 기술을 활용해 만든 치료제를 투여하여 마지막 감염자를 치료해 봅시다.',[['go','투여하기',()=>openVideo('success')]]);
+      S.flags.finalDone=true; logAdd('final'); sfx('done'); save();
+    }
+    if(!S.flags.finalAck){ await d.show('당신이 만든 치료제로 마지막 감염자를 치료하는 데 성공하였습니다!',[['next','다음']]); S.flags.finalAck=true; save(); }
+  } finally { await d.close(); unlock(); FLOW=false; save(); }
+}
+function resumeFlows(){
+  if(S.flags.treatmentYDone&&!S.flags.allAck) return treatFlow();
+  if(S.flags.treatmentZDone&&!S.flags.finalAck) return finalFlow();
+}
+
+/* ---------------- 진행 기록 (왼쪽 위 '치료제 개발 단계' 아래) ---------------- */
+const plogEl=$('#plog');
+const LOG_TXT={
+  rat:()=>`실험용 쥐 ${S.rat||''} 선택`, mats:'세포·배지 챙기기 완료', virus:'좀비 바이러스 조각 획득', bcell:'B림프구 추출',
+  fusion:'세포 융합 완료', transfer:'배지 이동 완료', culture:'잡종세포 배양 완료', split:'클론 분리 완료',
+  test:'항체 검사 완료 (클론 C 선택)', cultureC:'클론 C 배양 완료', treatY:()=>`좀비 바이러스 치료제 ${S.rat||''} 완성`,
+  one:'한 명의 감염자에게 치료제 투여', all:'모든 감염자에게 치료제 투여', pick:()=>`유전자 편집용 클론 ${S.pickLetter||''} 선택`,
+  edit:'유전자 편집 완료', treatZ:()=>`1회용 치료제 ${S.zLetter||''} 완성`, final:'마지막 감염자에게 치료제 투여',
+};
+function logAdd(k){ if(!S.log) S.log=[]; if(!S.log.includes(k)) S.log.push(k); renderLog(); }
+function renderLog(){
+  if(SHORT.on||!S.log||!S.log.length){ plogEl.style.display='none'; plogEl.innerHTML=''; return; }
+  const res=(ok)=>`<div class="res ${ok?'ok':'ng'}">└ ${ok?'성공':'실패'}</div>`;
+  plogEl.innerHTML=S.log.map(k=>{ const t=LOG_TXT[k]; const txt=typeof t==='function'?t():(t||k);
+    let h=`<div${k==='one'?' class="one"':''}>· ${txt}</div>`;
+    if(k==='one'&&S.flags.oneOK) h+=res(true);
+    if(k==='all'&&S.flags.allDone) h+=res(!S.flags.allFail);
+    if(k==='final'&&S.flags.finalDone) h+=res(true);
+    return h; }).join('');
+  plogEl.style.display='block'; placeLog(); updateCorners();
+}
+function placeLog(){ const top=phaseEl.offsetTop+phaseEl.offsetHeight+4; plogEl.style.top=top+'px';
+  plogEl.style.maxHeight=Math.max(40,worldEl.clientHeight-top-8)+'px'; plogEl.scrollTop=plogEl.scrollHeight; }
+
+/* ---------------- AI 도우미 버튼 (오른쪽 위) ---------------- */
+const aiEl=$('#aiBtn');
+aiEl.onclick=e=>{ e.stopPropagation(); if(SHOWCASE) return;
+  if(AI_HELPER_URL){ try{ window.open(AI_HELPER_URL,'_blank','noopener'); }catch(err){} }
+  else flash('AI 도우미 링크가 아직 연결되지 않았습니다.',2000); };
+if(SHORT.on) aiEl.style.display='none';
 
 /* ---------------- 튜토리얼 ---------------- */
 const TUT={lock:false,waitInc:false,canTake:false,box:false};
@@ -1343,7 +1533,12 @@ const phaseEl=$('#phase');
 function setPhaseLabel(){ phaseEl.textContent=S.phase==='tutorial'?'튜토리얼 단계':'치료제 개발 단계'; phaseEl.style.opacity=1; updateCorners(); }
 async function phaseToDev(){ await fade(phaseEl,0,300); await wait(300); phaseEl.textContent='치료제 개발 단계'; updateCorners(); await fade(phaseEl,1,500); }
 // 모서리 요소 폭을 CSS 변수로 알려 화면 위 문구가 그 사이에서만 펼쳐지게 한다
-function updateCorners(){ document.documentElement.style.setProperty('--corner-w',(phaseEl.offsetWidth+8)+'px'); if(SHORT.on) placeVerTag(); }
+function updateCorners(){
+  aiEl.style.right=(8+restartEl.offsetWidth+6)+'px';   // 'AI 도우미'는 '처음부터' 바로 왼쪽
+  const right=SHORT.on?0:(restartEl.offsetWidth+6+aiEl.offsetWidth+8);
+  const left=phaseEl.offsetWidth;   // 진행 기록은 문구보다 아래에서 시작하므로 폭을 비워 두지 않음
+  document.documentElement.style.setProperty('--corner-w',(Math.max(left,right)+8)+'px');
+  if(SHORT.on) placeVerTag(); else if(plogEl.style.display==='block') placeLog(); }
 
 /* ---------------- 입력·이동 ---------------- */
 let lockN=0;
@@ -1356,6 +1551,8 @@ function _c(e){ const c=e.code; if(/^Key[A-Z]$/.test(c)) return c[3].toLowerCase
   if(c==='Slash'||c==='NumpadDivide') return '/'; return '#'; }
 addEventListener('keydown',e=>{
   if(e.target&&e.target.tagName==='INPUT') return;
+  if(SHOWCASE){ if(e.code==='Space'||e.code.startsWith('Arrow')) e.preventDefault(); return; }   // 쇼케이스: 키보드 입력 무시
+  if((e.key==='+'||e.code==='NumpadAdd')&&!e.repeat){ toggleFast(); return; }                    // 숨은 2배속 켜기/끄기
   if(FEATURES.debug&&!e.repeat){ _kb=(_kb+_c(e)).slice(-8); if(_h(_kb)===3284227405){ _kb=''; toggleDebug(); } }
   if(KMAP[e.code]){ KEYS[KMAP[e.code]]=true; e.preventDefault(); }
   if(e.code==='Space'){ e.preventDefault(); if(!e.repeat) tryInteract(); }
@@ -1369,6 +1566,7 @@ document.querySelectorAll('#pad button').forEach(b=>{ const d=b.dataset.d;
 $('#act').addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); tryInteract(); });
 mapCv.addEventListener('pointerdown',e=>{
   if(locked()) return; const r=mapCv.getBoundingClientRect(); const mx=(e.clientX-r.left)/MAPR.s, my=(e.clientY-r.top)/MAPR.s;
+  if(MOBILE_TAP){ mobileTap(mx,my); return; }
   // 모바일(축약 버전): 사물을 한 번 누르면 1초간 이름만 표시(이동 안 함), 0.3초 안에 두 번 누르면 어디서든 바로 상호작용
   if(HOVER_ON&&e.pointerType!=='mouse'){ const o=objAt(mx,my);
     if(o){ const now=performance.now();
@@ -1379,13 +1577,26 @@ mapCv.addEventListener('pointerdown',e=>{
 });
 // 사물 이름 미리보기 (축약 버전): 데스크톱은 마우스를 올리면, 모바일은 한 번 누르면 1초 동안
 const HOVER_ON=SHORT.on, HOVER={obj:null,until:0}, TAP={obj:null,t:0};
+// 모바일(전체 버전): 캐릭터를 직접 움직이지 않음. 사물 한 번 탭 → 이름 표시(다른 곳을 탭하면 사라짐),
+//  사물 더블탭(0.5초 미만) → 가상 팝업창 열기(열 수 있는 단계일 때만), 바닥 더블탭 → 그 자리로 이동
+const MOBILE_TAP=IS_MOBILE&&!SHORT.on&&!SHOWCASE, MT={key:null,t:0,x:0,y:0};
+function mobileTap(mx,my){
+  const o=objAt(mx,my), now=performance.now(), key=o?o.id:'floor';
+  const dbl=MT.key===key&&now-MT.t<500&&(o||Math.hypot(mx-MT.x,my-MT.y)<24);
+  if(dbl){ MT.key=null; HOVER.obj=null; if(o) interact(o); else PL.path=findPath(mx,my); return; }
+  MT.key=key; MT.t=now; MT.x=mx; MT.y=my;
+  if(o){ HOVER.obj=o; HOVER.until=Infinity; } else HOVER.obj=null;
+}
+// 모바일: '치료제 개발 단계' 상자를 더블탭하면 숨은 2배속 켜기/끄기
+if(MOBILE_TAP){ let pt=0; $('#phase').addEventListener('pointerdown',e=>{ e.stopPropagation(); e.preventDefault(); const now=performance.now();
+  if(now-pt<500){ pt=0; toggleFast(); } else pt=now; }); }
 const hoverEl=document.createElement('div'); hoverEl.className='olabel'; hoverEl.style.display='none'; worldEl.appendChild(hoverEl);
 function objAt(mx,my){ let best=null; for(const o of OBJECTS){ if(mx>=o.fx&&mx<o.fx+o.fw&&my>=o.fy-o.th&&my<o.fy+o.fh&&(!best||o.fy+o.fh>best.fy+best.fh)) best=o; } return best; }
 mapCv.addEventListener('pointermove',e=>{ if(!HOVER_ON||e.pointerType!=='mouse') return; const r=mapCv.getBoundingClientRect();
   const o=objAt((e.clientX-r.left)/MAPR.s,(e.clientY-r.top)/MAPR.s); HOVER.obj=o; HOVER.until=o?Infinity:0; });
 mapCv.addEventListener('pointerleave',e=>{ if(e.pointerType==='mouse'){ HOVER.obj=null; HOVER.until=0; } });
 function updateHover(){
-  const o=HOVER.obj, show=HOVER_ON&&o&&performance.now()<HOVER.until&&!locked()&&o!==NEAR;
+  const o=HOVER.obj, show=(HOVER_ON||MOBILE_TAP)&&o&&performance.now()<HOVER.until&&!locked()&&o!==NEAR;
   if(!show){ hoverEl.style.display='none'; return; }
   hoverEl.textContent=o.name; hoverEl.style.display='block';
   hoverEl.style.left=(MAPR.left+(o.fx+o.fw/2)*MAPR.s)+'px'; hoverEl.style.top=(MAPR.top+(o.fy-o.th)*MAPR.s-4)+'px';
@@ -1419,11 +1630,11 @@ function updateNear(){
   if(show){ let lb=labelsEl.firstChild; if(!lb){ lb=document.createElement('div'); lb.className='olabel'; labelsEl.appendChild(lb); }
     lb.textContent=n.name; lb.style.left=(MAPR.left+(n.fx+n.fw/2)*MAPR.s)+'px'; lb.style.top=(MAPR.top+(n.fy-n.th)*MAPR.s-4)+'px'; }
   else labelsEl.innerHTML='';
-  restartEl.style.display=S.phase==='dev'&&!locked()?'block':'none';
-  hintEl.style.display=show&&!IS_MOBILE?'block':'none'; actEl.style.display=show&&IS_MOBILE?'block':'none';
+  restartEl.style.visibility=S.phase==='dev'&&!locked()?'visible':'hidden';
+  hintEl.style.display=show&&!IS_MOBILE&&!SHOWCASE?'block':'none'; actEl.style.display='none';   // 모바일 '상호작용' 버튼은 더 이상 쓰지 않음
 }
 let last=performance.now();
-const MOVE_SPEED=108; // 캐릭터 이동 속도(맵 픽셀/초). 처음 72에서 50% 늘림
+let MOVE_SPEED=108; // 캐릭터 이동 속도(맵 픽셀/초). 처음 72에서 50% 늘림 (쇼케이스에서만 더 빠르게 바꿈)
 function frame(t){
   const dt=Math.min(.05,(t-last)/1000); last=t;
   let dx=0, dy=0;
@@ -1450,20 +1661,22 @@ function frame(t){
 
 /* ---------------- 디버그 (비공개) ---------------- */
 const DBG={on:false};
+// 디버그 단계 (누적 적용). r = 고를 쥐 알파벳
 const STEPS=[
-  ['튜토리얼 건너뛴 직후',s=>{ s.phase='dev'; s.skipped=true; }],
-  ['튜토리얼 완료 직후',s=>{ s.stock=['cancer','medium']; s.inv[0]='epithelial'; }],
-  ['재료 모두 획득(쥐 A)',s=>{ s.stock=[]; s.rat='A'; ['cancer','medium','ratA','virus'].forEach(i=>add(s,i)); s.flags.hazardDone=true; }],
-  ['B림프구 획득',s=>{ rep(s,'ratA','bcell'); s.flags.tableBDone=true; }],
-  ['잡종세포 획득',s=>{ rm(s,'cancer'); rep(s,'bcell','hybrid'); s.flags.fusionDone=true; s.quest=TQ; }],
-  ['배지 이식 완료',s=>{ rm(s,'medium'); rep(s,'hybrid','hybridMedium'); s.flags.tableTransferDone=true; s.quest=IQ_H; }],
-  ['잡종세포 배양 완료',s=>{ rep(s,'hybridMedium','hybridCultured'); s.flags.hybridCultured=true; s.quest=null; }],
-  ['클론 A~E 획득',s=>{ rm(s,'hybridCultured'); LETTERS.forEach(l=>add(s,'clone'+l)); s.flags.microscopeDone=true; }],
-  ['클론 C 선택 완료',s=>{ ['epithelial','virus','cloneA','cloneB','cloneD','cloneE'].forEach(i=>rm(s,i)); s.flags.testerDone=true; s.quest=IQ_C; }],
-  ['클론 C 배양 완료',s=>{ rep(s,'cloneC','cloneCCultured'); s.flags.cloneCCultured=true; s.quest=null; }],
-  ['치료제 Y 완성(엔딩1 본 뒤)',s=>{ rep(s,'cloneCCultured','treatY'); s.flags.treatmentYDone=true; s.flags.ending1Seen=true; }],
-  ['검사기에서 클론 A 회수',s=>{ add(s,'cloneA'); s.pop.tester.left=['B','D','E']; s.flags.testerSecondDone=true; }],
-  ['유전자 편집 완료',s=>{ rep(s,'cloneA','edited'); s.editLetter='A'; s.flags.geneEditDone=true; }],
+  ['시작하기 누른 직후',(s)=>{ s.flags.started=true; }],
+  ['재료 모두 획득',(s,r)=>{ s.stock=[]; s.rat=r; ['epithelial','cancer','medium','rat'+r,'virus'].forEach(i=>add(s,i)); s.flags.hazardDone=true; s.log.push('rat','mats','virus'); }],
+  ['B림프구 획득',(s,r)=>{ rep(s,'rat'+r,'bcell'); s.flags.tableBDone=true; s.log.push('bcell'); }],
+  ['융합 세포 혼합물 획득',s=>{ rm(s,'cancer'); rep(s,'bcell','hybrid'); s.flags.fusionDone=true; s.quest=TQ; s.log.push('fusion'); }],
+  ['배지 이동 완료',s=>{ rm(s,'medium'); rep(s,'hybrid','hybridMedium'); s.flags.tableTransferDone=true; s.quest=IQ_H; s.log.push('transfer'); }],
+  ['잡종세포 배양 완료',s=>{ rep(s,'hybridMedium','hybridCultured'); s.flags.hybridCultured=true; s.quest=null; s.log.push('culture'); }],
+  ['클론 A~E 획득',s=>{ rm(s,'hybridCultured'); LETTERS.forEach(l=>add(s,'clone'+l)); s.flags.microscopeDone=true; s.log.push('split'); }],
+  ['클론 C 선택 완료',s=>{ ['epithelial','virus','cloneA','cloneB','cloneD','cloneE'].forEach(i=>rm(s,i)); s.flags.testerDone=true; s.quest=IQ_C; s.log.push('test'); }],
+  ['클론 C 배양 완료',s=>{ rep(s,'cloneC','cloneCCultured'); s.flags.cloneCCultured=true; s.quest=null; s.log.push('cultureC'); }],
+  ['치료제 완성(투여 전)',s=>{ rep(s,'cloneCCultured','treatY'); s.flags.treatmentYDone=true; s.log.push('treatY'); }],
+  ['모두에게 투여 완료',(s,r)=>{ Object.assign(s.flags,{oneOK:true,allDone:true,allFail:r==='A',allAck:true}); s.log.push('one','all'); }],
+  ['(쥐 A) 검사기에서 클론 A 회수',s=>{ add(s,'cloneA'); s.pop.tester.left=['B','D','E']; s.flags.testerSecondDone=true; s.pickLetter='A'; s.log.push('pick'); }],
+  ['(쥐 A) 유전자 편집 완료',s=>{ rep(s,'cloneA','edited'); s.editLetter='A'; s.flags.geneEditDone=true; s.log.push('edit'); }],
+  ['(쥐 A) 1회용 치료제 완성(투여 전)',s=>{ rep(s,'edited','treatZ'); s.zLetter='B'; s.flags.treatmentZDone=true; s.log.push('treatZ'); }],
 ];
 function add(s,id){ const i=s.inv.indexOf(null); if(i>=0) s.inv[i]=id; }
 function rm(s,id){ const i=s.inv.indexOf(id); if(i>=0) s.inv[i]=null; }
@@ -1472,26 +1685,290 @@ function applyState(ns){
   popSess++; popupMod=null; popupAnim=false; busyN=0; lockN=0; popupEl.style.display='none'; popupEl.style.transform='translateY(100%)'; P.clear();
   document.querySelectorAll('.box').forEach(b=>b.remove()); boxN=0; tutEl.style.display='none'; tutEl.style.opacity=0; TUT.lock=TUT.box=TUT.waitInc=TUT.canTake=false;
   cineOn=false; cineEl.style.display='none'; cineEl.innerHTML=''; hlClear(); deselect(); M.stage=null; M.flash=null;
-  const keepMute=S.muted; S=ns; S.muted=keepMute; for(const k in ICACHE) delete ICACHE[k]; renderInv(); setPhaseLabel(); msgUpdate(); updateX(); save();
+  FLOW=false; const keepMute=S.muted; S=ns; S.muted=keepMute; for(const k in ICACHE) delete ICACHE[k]; renderInv(); setPhaseLabel(); renderLog(); msgUpdate(); updateX(); save();
 }
 function toggleDebug(){ DBG.on=!DBG.on; const d=$('#dbg'); if(!DBG.on){ d.style.display='none'; SPEED=BASE_SPEED; return; } buildDebug(); d.style.display='block'; }
 function buildDebug(){ const d=$('#dbg');
-  d.innerHTML=`<div class="h">디버그</div><div id="dSteps"></div><div class="h">쥐 선택</div><button data-r="A">쥐 A</button><button data-r="B">쥐 B</button>
+  d.innerHTML=`<div class="h">디버그</div><div id="dSteps"></div><div class="h">쥐 선택 (단계 버튼에 적용)</div>${RATS.map(r=>`<button data-r="${r}">쥐 ${r}</button>`).join('')}
     <div class="h">속도</div><button data-sp="1">×1</button><button data-sp="4">×4</button><button data-sp="10">×10</button> <span id="dSp"></span>
     <div class="h">아이템</div><select id="dItem">${Object.keys(ITEMS).map(k=>`<option value="${k}">${itemName(k)}</option>`).join('')}</select>
     <button id="dGive">지급</button><button id="dClear">인벤토리 비우기</button>
-    <div class="h">기타</div><button id="dTut">튜토리얼 처음부터</button><button id="dReset">저장 삭제</button><button id="dClose">닫기</button>`;
+    <div class="h">기타</div><button id="dTut">처음부터(시작 안내)</button><button id="dReset">저장 삭제</button><button id="dClose">닫기</button>`;
   const st=d.querySelector('#dSteps');
-  STEPS.forEach((s,i)=>{ const b=document.createElement('button'); b.textContent=(i+1)+'. '+s[0]; b.onclick=()=>{ const ns=freshState(); const r=S.rat&&S.rat!=='A'?S.rat:'A';
-    for(let k=0;k<=i;k++) STEPS[k][1](ns); if(ns.rat&&r==='B'){ ns.rat='B'; ns.inv=ns.inv.map(x=>x==='ratA'?'ratB':x); } applyState(ns); }; st.appendChild(b); });
-  d.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{ S.rat=b.dataset.r; S.inv=S.inv.map(x=>/^rat[AB]$/.test(x||'')?'rat'+S.rat:x); for(const k in ICACHE) delete ICACHE[k]; renderInv(); save(); });
+  STEPS.forEach((s,i)=>{ const b=document.createElement('button'); b.textContent=(i+1)+'. '+s[0]; b.onclick=()=>{ const ns=freshState(); const r=DBG.rat||S.rat||'A';
+    for(let k=0;k<=i;k++) STEPS[k][1](ns,r); applyState(ns); resumeFlows(); }; st.appendChild(b); });
+  d.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{ DBG.rat=b.dataset.r; S.rat=b.dataset.r; S.inv=S.inv.map(x=>/^rat[A-D]$/.test(x||'')?'rat'+S.rat:x); for(const k in ICACHE) delete ICACHE[k]; renderInv(); renderLog(); save(); });
   const sp=()=>d.querySelector('#dSp').textContent='현재 ×'+SPEED; sp();
   d.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{ SPEED=+b.dataset.sp*BASE_SPEED; sp(); });
   d.querySelector('#dGive').onclick=()=>{ const id=d.querySelector('#dItem').value; if(/^treat|edited/.test(id)&&!S.rat) S.rat='A'; if(id==='edited'&&!S.editLetter) S.editLetter='A'; inv.add(id); };
   d.querySelector('#dClear').onclick=()=>{ S.inv=Array(8).fill(null); renderInv(); save(); };
-  d.querySelector('#dTut').onclick=()=>{ applyState(freshState()); clearSave(); NOSAVE=false; runTutorial(); };
+  d.querySelector('#dTut').onclick=()=>{ applyState(freshState()); clearSave(); NOSAVE=false; startIntro(); };
   d.querySelector('#dReset').onclick=()=>{ clearSave(); NOSAVE=false; };
   d.querySelector('#dClose').onclick=()=>toggleDebug();
+}
+
+/* ======================== 쇼케이스 (showcase.html 전용) ========================
+   index.html에서는 SHOWCASE=false라 실행되지 않음. 실제 메타버스 코드를 그대로 쓰면서 가상 커서가 대신 클릭하고,
+   검은 효과(반투명 암막) 위 문구 · 화면 확대 · 공포 영화풍 사운드로 '첫 단일클론항체 치료제 완성'까지만 보여 준다.
+   (치료제 투여·변이·유전자 편집, 쥐별 결과는 절대 보여 주지 않음) */
+const scSleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function scUntil(fn,timeout=8000,step=40){ const t0=performance.now(); while(!fn()){ if(performance.now()-t0>timeout) return false; await scSleep(step); } return true; }
+const scVis=el=>!!el&&el.isConnected&&el.offsetParent!==null&&+getComputedStyle(el).opacity>.05;
+function scBtn(t){ return [...document.querySelectorAll('button')].find(b=>b.textContent.trim()===t&&scVis(b)); }
+function scFade(el,to,ms){ const from=getComputedStyle(el).opacity; const a=el.animate([{opacity:from},{opacity:to}],{duration:ms,easing:'ease-in-out',fill:'forwards'}); return animDone(a,ms,()=>{ el.style.opacity=to; }); }
+function scMake(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); const el=d.firstElementChild; document.body.appendChild(el); return el; }
+let scCur=null, scVeilEl=null, scSayEl=null, scLightEl=null, scFlickEl=null, SC_RAT='A';
+
+// ---- 가상 커서 (빠르게 움직임) ----
+const scCurShow=on=>scFade(scCur,on?1:0,200);
+async function scCurTo(x,y,ms=220){ scCur.style.transition=`transform ${ms}ms cubic-bezier(.45,.05,.3,1)`; scCur.style.transform=`translate(${x}px,${y}px)`; await scSleep(ms+40); }
+function scRipple(x,y){ const rp=document.createElement('div'); rp.className='scRip'; rp.style.left=x+'px'; rp.style.top=y+'px'; document.body.appendChild(rp); setTimeout(()=>rp.remove(),550); }
+async function scClick(el,ms){ if(!el) return false; const r=el.getBoundingClientRect(), x=r.left+r.width/2, y=r.top+r.height/2; await scCurTo(x,y,ms);
+  scRipple(x,y); await scSleep(40); el.click(); await scSleep(60); return true; }
+async function scClickBtn(t,timeout=8000,ms){ let b=null; await scUntil(()=>(b=scBtn(t)),timeout); return scClick(b,ms); }
+const scIdle=(t=15000)=>scUntil(()=>!busyN&&!popupAnim,t);
+async function scTake(k){ let el=null; await scUntil(()=>(el=P.q(k))&&scVis(el)&&!busyN&&!popupAnim,10000);
+  await scClick(el); await scSleep(250); await scClickBtn('획득하기',3000,180); await scSleep(60); await scIdle(); }
+async function scPlace(id){ const i=S.inv.indexOf(id); if(i<0) return; await scClick(slots[i].querySelector('img'));
+  await scSleep(250); await scClickBtn('배치하기',3000,180); await scUntil(()=>!inv.has(id),4000); await scIdle(); }
+async function scWalk(id){ const o=OBJECTS.find(q=>q.id===id), sp=standSpot(o); if(!sp) return;
+  PL.path=findPath(sp[0],sp[1]); await scUntil(()=>!PL.path,2200,30); PL.path=null; PL.x=sp[0]; PL.y=sp[1]; PL.dir=sp[2]; await scSleep(80); }
+
+// ---- 화면 확대 (메타버스 영역 전체를 확대·이동) ----
+function scZoom(s,cx=0,cy=0,ms=1600){ const W=worldEl.clientWidth, H=worldEl.clientHeight; let tx=0, ty=0;
+  if(s>1){ tx=Math.min(0,Math.max(W-s*W,W/2-s*cx)); ty=Math.min(0,Math.max(H-s*H,H/2-s*cy)); } else s=1;
+  worldEl.style.transition=ms?`transform ${ms}ms cubic-bezier(.45,.05,.3,1), filter 1.4s ease`:'filter 1.4s ease';
+  worldEl.style.transform=`translate(${tx}px,${ty}px) scale(${s})`; return scSleep(ms); }
+const scObjC=id=>{ const o=OBJECTS.find(q=>q.id===id), s=MAPR.s; return [MAPR.left+(o.fx+o.fw/2)*s, MAPR.top+(o.fy-o.th+(o.fy+o.fh))/2*s]; };
+const scStageP=(px,py)=>[stageEl.offsetLeft+stageEl.offsetWidth*px/100, stageEl.offsetTop+stageEl.offsetHeight*py/100];
+
+// ---- 검은 효과(반투명 암막) · 가운데 문구 ----
+const scVeil=(a,ms=900)=>scFade(scVeilEl,a,ms);
+async function scSayIn(text,cls='',ms=500){ const t=document.createElement('div'); t.className='t '+cls; t.textContent=text; scSayEl.innerHTML=''; scSayEl.appendChild(t);
+  scWhisper(); const a=t.animate([{opacity:0,filter:'blur(8px)',transform:'scale(1.05)'},{opacity:1,filter:'blur(0px)',transform:'scale(1)'}],{duration:ms,easing:'ease-out',fill:'forwards'});
+  await animDone(a,ms,()=>{ t.style.opacity=1; }); return t; }
+async function scSayOut(t,ms=350){ const a=t.animate([{opacity:1,filter:'blur(0px)'},{opacity:0,filter:'blur(6px)'}],{duration:ms,easing:'ease-in',fill:'forwards'});
+  await animDone(a,ms,()=>{ t.style.opacity=0; }); t.remove(); }
+async function scSay(text,cls='',hold=2600){ const t=await scSayIn(text,cls); await scSleep(hold); await scSayOut(t); }
+// 장면 전환: 완전히 어두워진 사이에 다음 장면을 준비하고, 반투명 암막 위에 문구를 띄운 뒤 화면을 걷어 냄
+async function scChapter(text,cls,hold,setup,afterSay){ await scVeil(1,350); if(setup) await setup(); await scSleep(80);
+  await scVeil(.72,250); await scSay(text,cls,hold); if(afterSay) await afterSay(); await scVeil(0,400); }
+// 조명이 잠깐 깜빡이는 연출
+function scFlicker(){ scBuzz(); scFlickEl.animate([{opacity:0},{opacity:.5,offset:.08},{opacity:0,offset:.16},{opacity:.35,offset:.3},{opacity:0,offset:.42},{opacity:0}],{duration:1100}); }
+// 캐릭터 주변만 밝은 손전등 효과 + 가상 팝업창이 열려 있으면 조금 덜 어둡게
+function scTick(){ const x=MAPR.left+PL.x*MAPR.s, y=MAPR.top+(PL.y-8)*MAPR.s, r=MAPR.s*92;
+  scLightEl.style.background=`radial-gradient(circle at ${x}px ${y}px, rgba(0,0,0,0) ${r*.35}px, rgba(0,0,0,.25) ${r}px, rgba(0,0,0,.38) ${r*2.4}px)`;
+  document.body.classList.toggle('scPop',!!popupMod); requestAnimationFrame(scTick); }
+
+// ---- 사운드: Web Audio로 직접 합성 (낮은 저음 드론 앰비언트 + 공포 영화풍 효과음) ----
+function scAC(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state!=='running'&&AC.resume) AC.resume(); }catch(e){ return null; } return AC; }
+let scNoiseBuf=null, scVerbN=null, scFxG=null;
+function scNoise(){ if(!scNoiseBuf){ const len=AC.sampleRate*2|0; scNoiseBuf=AC.createBuffer(1,len,AC.sampleRate); const ch=scNoiseBuf.getChannelData(0); for(let i=0;i<len;i++) ch[i]=Math.random()*2-1; } return scNoiseBuf; }
+function scVerb(){ if(!scVerbN){ const len=AC.sampleRate*3.2|0, b=AC.createBuffer(2,len,AC.sampleRate);
+    for(let c=0;c<2;c++){ const ch=b.getChannelData(c); for(let i=0;i<len;i++) ch[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6); }
+    scVerbN=AC.createConvolver(); scVerbN.buffer=b; const g=AC.createGain(); g.gain.value=.5; scVerbN.connect(g).connect(AC.destination); } return scVerbN; }
+function scBus(){ if(!scFxG){ scFxG=AC.createGain(); scFxG.gain.value=.9; scFxG.connect(AC.destination); } return scFxG; }
+function scOut(g,dest,verb){ g.connect(dest||scBus()); if(verb){ const s=AC.createGain(); s.gain.value=verb; g.connect(s).connect(scVerb()); } }
+function scTone(type,f,t,dur,vol,{f2,lp,q,att=.01,dest,verb=.3}={}){ const o=AC.createOscillator(), g=AC.createGain(); o.type=type; o.frequency.setValueAtTime(f,t);
+  if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+dur);
+  g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+att); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  let n=o; if(lp){ const fl=AC.createBiquadFilter(); fl.type='lowpass'; fl.frequency.value=lp; if(q) fl.Q.value=q; o.connect(fl); n=fl; }
+  n.connect(g); scOut(g,dest,verb); o.start(t); o.stop(t+dur+.05); return o; }
+function scNz(t,dur,vol,{type='lowpass',f=800,f2,q=1,att=.01,dest,verb=.3}={}){ const s=AC.createBufferSource(), fl=AC.createBiquadFilter(), g=AC.createGain();
+  s.buffer=scNoise(); s.loop=true; fl.type=type; fl.frequency.setValueAtTime(f,t); if(f2) fl.frequency.exponentialRampToValueAtTime(f2,t+dur); fl.Q.value=q;
+  g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+att); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  s.connect(fl).connect(g); scOut(g,dest,verb); s.start(t,Math.random()*1.5); s.stop(t+dur+.05); }
+// 효과음 (게임의 sfx() 이름을 그대로 받아 공포 영화풍 소리로 바꿔 냄)
+function scSfx(n){ if(!scAC()) return; try{ const t=AC.currentTime+.01;
+  switch(n){
+    case 'click': case 'tick': scNz(t,.07,.07,{type:'bandpass',f:1800,q:3,verb:.2}); scTone('sine',190,t,.09,.06,{f2:120,verb:.1}); break;   // 둔탁한 딸깍
+    case 'get': scTone('sine',150,t,.7,.4,{f2:50,verb:.45}); scNz(t,.6,.07,{f:900,f2:140,verb:.45}); break;                                 // 낮게 울리는 '쿵'
+    case 'place': scTone('sine',120,t,.5,.4,{f2:45,verb:.35}); scNz(t,.22,.1,{f:1000,verb:.2}); break;
+    case 'open': case 'close': scNz(t,1,.09,{type:'bandpass',f:n==='open'?220:1300,f2:n==='open'?1500:200,q:1.6,att:.5,verb:.55}); break;  // 휘익
+    case 'flash': scTone('sine',95,t,2,.5,{f2:28,verb:.6}); scNz(t,1.1,.09,{type:'highpass',f:2500,verb:.9});                               // 융합 섬광: 충격음
+      scTone('sine',1244,t,1.6,.02,{verb:.9}); scTone('sine',1318,t,1.6,.02,{verb:.9}); break;
+    case 'done': scBell(t,.05); break;
+  } }catch(e){} }
+function scBell(t,v){ [[196,1],[541,.6],[1059,.35],[1745,.2]].forEach(([f,k])=>scTone('sine',f*(1+(Math.random()-.5)*.004),t,4.5*(1.2-k*.6),v*k,{verb:.8})); }
+function scWhisper(){ if(!scAC()) return; try{ scNz(AC.currentTime+.02,1.7,.035,{type:'bandpass',f:450,f2:1700,q:5,att:.9,verb:.7}); }catch(e){} }
+function scBuzz(){ if(!scAC()) return; try{ const t=AC.currentTime+.01; [0,.17,.36].forEach(d=>scTone('sawtooth',120,t+d,.12,.025,{lp:1800,verb:.2})); }catch(e){} }
+function scHeart(t,v){ scTone('sine',64,t,.22,v,{f2:38,verb:.15}); scNz(t,.07,v*.18,{f:320,verb:0}); scTone('sine',58,t+.27,.24,v*.75,{f2:36,verb:.15}); }
+// '본격 시작' 순간의 묵직한 충격음
+function scHit(){ if(!scAC()) return; try{ const t=AC.currentTime+.02;
+  scTone('sine',72,t,3.2,.6,{f2:26,verb:.5}); scNz(t,2.4,.2,{f:800,f2:70,verb:.6});
+  [98,103.8,146.8].forEach(f=>scTone('sawtooth',f,t,3.4,.035,{lp:900,verb:.8}));
+  scTone('sine',2093,t+.05,2.6,.012,{verb:.9}); scTone('sine',2217,t+.05,2.6,.012,{verb:.9});
+  scHeart(t+1.4,.3); scHeart(t+2.5,.24); }catch(e){} }
+// 치료제를 만드는 동안: 점점 높아지는 소리 + 빨라지는 심장 박동 → 완성 순간 뚝 끊김
+function scBuild(sec){ if(!scAC()) return; try{ const t=AC.currentTime+.05;
+  const o=AC.createOscillator(), f=AC.createBiquadFilter(), g=AC.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(70,t); o.frequency.exponentialRampToValueAtTime(260,t+sec);
+  f.type='lowpass'; f.frequency.setValueAtTime(180,t); f.frequency.exponentialRampToValueAtTime(2000,t+sec); f.Q.value=6;
+  g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.06,t+sec); g.gain.exponentialRampToValueAtTime(.0001,t+sec+.08);
+  o.connect(f).connect(g); scOut(g,null,.4); o.start(t); o.stop(t+sec+.15);
+  scNz(t,sec,.05,{type:'highpass',f:400,f2:5000,att:sec*.97,verb:.3});
+  let bt=t+.3, bpm=58; while(bt<t+sec-.35){ scHeart(bt,.2+.2*(bt-t)/sec); bpm+=(132-58)*(60/bpm)/sec; bt+=60/bpm; } }catch(e){} }
+function scRelease(){ if(!scAC()) return; try{ const t=AC.currentTime+.02; ambLevel(0,.2);
+  if(AMB.g){ AMB.g.gain.cancelScheduledValues(t); AMB.g.gain.setValueAtTime(.12,t); AMB.g.gain.linearRampToValueAtTime(.45,t+9); }
+  scBell(t,.07); scTone('sine',110,t,8,.08,{att:1.8,verb:.6}); scTone('sine',164.8,t,8,.05,{att:2.2,verb:.6}); }catch(e){} }
+// 배경음: 리듬 없는 저음 드론 + 바람 같은 잡음 + 단계가 오를수록 커지는 불협화음, 가끔 멀리서 울리는 소리
+const AMB={on:false,g:null,P:null,src:[],evT:null,lvl:0};
+function ambStart(){ if(AMB.on||!scAC()) return; try{ AMB.on=true; AMB.src=[]; const t=AC.currentTime, src=n=>{ AMB.src.push(n); n.start(); return n; };
+  const m=AC.createGain(); m.gain.setValueAtTime(.0001,t); m.gain.exponentialRampToValueAtTime(.45,t+7); m.connect(AC.destination);
+  const vs=AC.createGain(); vs.gain.value=.3; m.connect(vs).connect(scVerb()); AMB.g=m;
+  const lp=AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=150; lp.Q.value=5; const dg=AC.createGain(); dg.gain.value=.16; lp.connect(dg).connect(m);
+  [['sawtooth',55],['sawtooth',55.42],['triangle',41.2]].forEach(([ty,f])=>{ const o=AC.createOscillator(); o.type=ty; o.frequency.value=f; o.connect(lp); src(o); });
+  const lfo=AC.createOscillator(), lg=AC.createGain(); lfo.frequency.value=.06; lg.gain.value=55; lfo.connect(lg).connect(lp.frequency); src(lfo);
+  const ns=AC.createBufferSource(); ns.buffer=scNoise(); ns.loop=true; const nf=AC.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=380; nf.Q.value=.8;
+  const ng=AC.createGain(); ng.gain.value=.05; const nl=AC.createOscillator(), nlg=AC.createGain(); nl.frequency.value=.09; nlg.gain.value=.035; nl.connect(nlg).connect(ng.gain); src(nl);
+  ns.connect(nf).connect(ng).connect(m); src(ns);
+  const tf=AC.createBiquadFilter(); tf.type='lowpass'; tf.frequency.value=700; const tg=AC.createGain(); tg.gain.value=.0001; tf.connect(tg).connect(m);
+  [220,233.08,311.1].forEach(f=>{ const o=AC.createOscillator(); o.type='triangle'; o.frequency.value=f; const v=AC.createOscillator(), vg=AC.createGain();
+    v.frequency.value=.15+Math.random()*.3; vg.gain.value=1.6; v.connect(vg).connect(o.frequency); src(v); o.connect(tf); src(o); });
+  const hg=AC.createGain(); hg.gain.value=.0001; hg.connect(m); [1567,1574].forEach(f=>{ const o=AC.createOscillator(); o.type='sine'; o.frequency.value=f; o.connect(hg); src(o); });
+  AMB.P={lp,dg,tg,tf,hg}; AMB.lvl=0;
+  const ev=()=>{ if(!AMB.on) return; try{ const t=AC.currentTime+.05, k=Math.random();
+      if(k<.4) scGroan(t); else if(k<.7) scTone('sine',880+Math.random()*600,t,4.5,.01+.005*AMB.lvl,{att:1.6,dest:m,verb:.9});
+      else scNz(t,4,.025,{type:'bandpass',f:200,f2:900,q:5,att:2.2,dest:m,verb:.8}); }catch(e){}
+    AMB.evT=setTimeout(ev,(7+Math.random()*8)*1000/(1+AMB.lvl*.3)); };
+  AMB.evT=setTimeout(ev,6000); }catch(e){} }
+function scGroan(t){ const o=AC.createOscillator(), f=AC.createBiquadFilter(), g=AC.createGain(), v=AC.createOscillator(), vg=AC.createGain();
+  o.type='sawtooth'; o.frequency.setValueAtTime(95,t); o.frequency.exponentialRampToValueAtTime(60,t+3.3); v.frequency.value=5.5; vg.gain.value=3; v.connect(vg).connect(o.frequency);
+  f.type='bandpass'; f.frequency.value=420; f.Q.value=7; g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.045,t+1.1); g.gain.exponentialRampToValueAtTime(.0001,t+3.5);
+  o.connect(f).connect(g); scOut(g,AMB.g,.6); o.start(t); v.start(t); o.stop(t+3.6); v.stop(t+3.6); }
+function ambLevel(l,sec=6){ if(!AMB.on) return; try{ const t=AC.currentTime, P=AMB.P; AMB.lvl=l;
+  const r=(p,v)=>{ p.cancelScheduledValues(t); p.setValueAtTime(p.value,t); p.linearRampToValueAtTime(v,t+sec); };
+  r(P.lp.frequency,[150,190,250,330][l]); r(P.dg.gain,[.16,.18,.21,.24][l]); r(P.tg.gain,[.0001,.012,.024,.04][l]);
+  r(P.tf.frequency,[700,800,1000,1300][l]); r(P.hg.gain,[.0001,.0001,.0018,.0045][l]); }catch(e){} }
+function ambStop(ms=2000){ if(!AMB.on) return; AMB.on=false; clearTimeout(AMB.evT); const g=AMB.g, src=AMB.src;
+  try{ const t=AC.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.linearRampToValueAtTime(.0001,t+ms/1000); }catch(e){}
+  setTimeout(()=>{ src.forEach(n=>{ try{ n.stop(); }catch(e){} }); try{ g.disconnect(); }catch(e){} },ms+100); }
+
+// ---- 장면별 상태 ----
+function scState(k){
+  const s=freshState(); s.flags.started=true; if(k==='start') return s;
+  const set=ids=>{ s.inv=Array(8).fill(null); ids.forEach((id,i)=>s.inv[i]=id); };
+  s.rat=SC_RAT; s.stock=[]; s.flags.hazardDone=true;
+  if(k==='place'){ set(['virus','epithelial','cancer','medium','rat'+SC_RAT]); return s; }
+  s.flags.tableBDone=true;
+  if(k==='fusion'){ set(['virus','epithelial','medium']); return s; }
+  Object.assign(s.flags,{fusionDone:true,tableTransferDone:true});
+  if(k==='culture'){ set(['virus','epithelial']); return s; }
+  s.flags.hybridCultured=true;
+  if(k==='split'){ set(['virus','epithelial']); return s; }
+  s.flags.microscopeDone=true;
+  if(k==='test'){ set([]); return s; }
+  Object.assign(s.flags,{testerDone:true,cloneCCultured:true}); set(['cloneCCultured']); return s;   // 'produce'
+}
+// 다음 장면 준비: 상태를 바꾸고 캐릭터를 사물 앞에 세운 뒤, 정해 둔 단계로 가상 팝업창을 바로 연다
+// (앞 장면의 연출이 다 끝날 때까지 기다린 뒤에 바꿈)
+async function scScene(k,id,prep){ await scIdle(20000); applyState(scState(k)); scZoom(1,0,0,0); const o=OBJECTS.find(q=>q.id===id), sp=standSpot(o);
+  PL.x=sp[0]; PL.y=sp[1]; PL.dir=sp[2]; PL.path=null; if(prep) prep(S.pop[id]);
+  const sp0=SPEED; SPEED=6; await openPopup(MODS[id]); SPEED=sp0; await scSleep(150); }
+
+// ---- 시나리오 ----
+async function scRun(){   // 약 1분: 커서·연출은 빠르게, 문구는 읽을 수 있을 만큼만 머무름
+  try{
+    SPEED=2.5; MOVE_SPEED=260; FLOW=false;
+    ambStart();
+    // 암전 → 도입 문구
+    await scSleep(300); applyState(scState('start')); PL.x=11.5*TW+8; PL.y=12*TW+8; PL.dir='up';
+    scZoom(1.45,...scObjC('tester'),0);
+    await scSay('간신히 좀비들을 따돌리고 도착한 생명과학 선생님의 연구실...','',1700); await scSleep(150);
+    await scSay('이곳에서 치료제를 만들어 학교를 구해야 한다.','',1400); await scSleep(150);
+    // 밝아지며 연구실이 드러남: 출입문에서 몇 걸음 들어오고, 화면은 물러남
+    ambLevel(1,8); scVeil(0,1200); scZoom(1,0,0,2000); PL.path=[[PL.x,PL.y-30]]; await scSleep(900); scFlicker(); await scSleep(900);
+
+    // 획득하기
+    await scVeil(.72,300); await scSay('획득하기 버튼을 눌러 물건들을 가져갈 수 있습니다.','',1500); await scVeil(0,350);
+    scZoom(1.5,...scObjC('hazard'),1200); await scWalk('hazard');
+    scZoom(1,0,0,350); interact(OBJECTS.find(q=>q.id==='hazard')); await scUntil(()=>popupMod&&!popupAnim,6000);
+    await scZoom(1.2,...scStageP(50,50),400); scCurShow(true); await scTake('virus'); scCurShow(false);
+    await scUntil(()=>!popupMod,6000); scZoom(1,0,0,300); await scSleep(250);
+
+    // 배치하기
+    await scChapter('획득한 물건을 배치하세요.','',1200,()=>scScene('place','table',T=>{ T.stage='ratWait'; }));
+    scCurShow(true); await scPlace('rat'+SC_RAT); await scCurTo(innerWidth*.62,innerHeight*.78,250); await scSleep(500);
+
+    // 본격적인 시작
+    scCurShow(false); await scVeil(.94,700); scHit(); ambLevel(2,8);
+    const big=await scSayIn('단일클론항체를 생산하세요.','big',600); await scSleep(1100); await scSayOut(big,450); await scSleep(150);
+    await scSay('B림프구 추출...','sub',800); await scVeil(0,400);
+    scCurShow(true); await scClickBtn('비장에서 B림프구 추출',8000); scCurShow(false);
+    scZoom(1.3,...scStageP(52,52),700); await scUntil(()=>S.pop.table.stage==='bReady'&&!busyN,12000); await scSleep(700);
+
+    // 세포 융합: 접안렌즈 장면(융합 애니메이션)만
+    SPEED=2;
+    await scChapter('세포 융합','sub',800,
+      ()=>scScene('fusion','fusion',F=>{ Object.assign(F,{stage:'place',placed:{cancer:true,bcell:true},prog:true}); }),
+      async()=>{ await scVeil(1,200); P.q('btn').click(); await scSleep(650); scZoom(1.3,...scStageP(50,50),0); });
+    await scUntil(()=>P.q('merged'),10000); await scSleep(700);
+    SPEED=2.5;
+
+    // 융합에 성공한 세포 선별: 배양기 문을 열고 '배양된 잡종세포'를 획득
+    await scChapter('융합에 성공한 세포 선별','sub',1000,
+      ()=>scScene('culture','incubator',I=>{ Object.assign(I,{mode:'hybrid',stage:'cDone',prog:true}); }));
+    scZoom(1.15,...scStageP(50,45),350);
+    scCurShow(true); await scClickBtn('문 열기',6000); await scUntil(()=>S.pop.incubator.stage==='cResult'&&!busyN,6000); await scSleep(300);
+    await scTake('hybridCultured'); scCurShow(false); await scUntil(()=>!popupMod,6000); scZoom(1,0,0,300); await scSleep(200);
+
+    // 클론 분리: 현미경 접안렌즈 장면만
+    await scChapter('서로 다른 항체를 생산하는 세포 클론들을 분리해 내세요.','',1400,
+      ()=>scScene('split','microscope',Mi=>{ Object.assign(Mi,{stage:'placed',prog:true,n:0}); }),
+      async()=>{ await scVeil(1,200); P.q('btn').click(); await scSleep(800); scZoom(1.18,...scStageP(52,52),0); });
+    await scUntil(()=>MODS.microscope.ready&&S.pop.microscope.stage==='split'&&!busyN,8000);
+    scCurShow(true);
+    for(let i=0;i<5;i++){ await scClick(P.q('bj'),i?120:220); await scSleep(260); }
+    scCurShow(false); await scSleep(500); scZoom(1,0,0,500); await scUntil(()=>!popupMod,12000); await scSleep(300);
+
+    // 항원-항체 반응 검사: 홈판을 하나씩 눌러 결합도 그래프 확인
+    await scChapter('가장 적합한 항체를 생산하는 클론을 찾아내세요.','',1400,
+      ()=>scScene('test','tester',X=>{ MODS.tester.mode='first'; Object.assign(X,{stage:'graph',prog:true,checked:[],selReady:false,
+        placed:{A:true,B:true,C:true,D:true,E:true},ant:{virus:true,epithelial:true}}); }),
+      async()=>{ ambLevel(3,10); const r=P.q('screen'); const W=worldEl.clientWidth, H=worldEl.clientHeight;
+        const s=Math.min(1.45,W/(r.offsetWidth*1.12),H/(r.offsetHeight*1.18)); scZoom(s,stageEl.offsetLeft+r.offsetLeft+r.offsetWidth/2,stageEl.offsetTop+r.offsetTop+r.offsetHeight/2,0); });
+    scCurShow(true);
+    for(const l of LETTERS){ await scClick(P.q('screen').querySelector(`.well[data-w="${l}"]`),l==='A'?220:160); await scSleep(80);
+      await scUntil(()=>!busyN&&!MODS.tester.anim,6000); await scSleep(l==='A'?400:220); }
+    scCurShow(false); await scSleep(600);
+
+    // 치료제 완성 (생산기 문구는 쇼케이스용으로 바꿔 둔 MODS.producer.seq 사용)
+    await scChapter('치료제를 완성하세요.','',1000,()=>scScene('produce','producer',Pr=>{ Object.assign(Pr,{mode:'Y',stage:'wait'}); }));
+    scCurShow(true); await scPlace('cloneCCultured'); await scClickBtn('단일클론항체 추출하기',8000); scCurShow(false);
+    scZoom(1.3,...scStageP(50,50),3200);
+    await scUntil(()=>S.pop.producer.stage==='yReady'&&!busyN,25000); await scSleep(1300);
+
+    // 암전 → 마지막 화면
+    await scVeil(1,900); document.body.classList.remove('scMsg'); stageMsg(null); await scSleep(300);
+  }catch(e){ console.error(e); }
+}
+
+// ---- 시작 화면 · 마지막 화면 ----
+function scTitleCard(){ return new Promise(res=>{
+  const el=scMake(`<div class="scCard"><h1>좀비 바이러스 치료제를 만들어라</h1>
+    <div class="s2">시뮬레이션을 통해 단일클론항체 치료제를 만들고 효과를 확인해 보자.</div>
+    <button class="btn go">시뮬레이션 살펴보기</button></div>`);
+  const b=el.querySelector('.go');
+  b.onclick=async()=>{ if(b.disabled) return; b.disabled=true; scAC(); sfx('click'); scVeilEl.style.opacity=1; await scFade(el,0,1200); el.remove(); res(); }; }); }
+function scEndCard(){ return new Promise(res=>{
+  const el=scMake(`<div class="scCard" style="opacity:0"><h1 class="end">좀비 바이러스로부터 학교를 지켜라!</h1>
+    <div class="s2">AI 도우미와 협력하여 치료제를 만들 방법을 찾아내세요!</div>
+    <button class="btn go">처음으로</button></div>`);
+  scFade(el,1,1800); const b=el.querySelector('.go');
+  b.onclick=async()=>{ if(b.disabled) return; b.disabled=true; sfx('click'); ambStop(1800); await scFade(el,0,900); el.remove(); res(); }; }); }
+// 처음 상태(시작 화면 뒤에 어둡게 보이는 연구실)로 되돌림
+function scReset(){ applyState(scState('start')); PL.x=11.5*TW+8; PL.y=12*TW+8; PL.dir='up'; PL.path=null; scZoom(1,0,0,0);
+  document.body.classList.remove('scMsg'); scVeilEl.style.opacity=0; scSayEl.innerHTML=''; }
+async function scBoot(){
+  document.body.classList.add('showcase'); layout();
+  scVeilEl=scMake('<div id="scVeil"></div>'); scSayEl=scMake('<div id="scSay"></div>');
+  scMake('<div id="scVig"></div>'); scMake('<div id="scGrain"></div>'); scFlickEl=scMake('<div id="scFlick"></div>'); scMake('<div id="scBlock"></div>');
+  scLightEl=document.createElement('div'); scLightEl.id='scLight'; worldEl.appendChild(scLightEl); requestAnimationFrame(scTick);
+  scCur=scMake('<svg id="scCur" viewBox="0 0 24 28"><path d="M2 2 L2 22 L7.5 17 L11 25 L14.5 23.5 L11 15.8 L18.5 15.8 Z" fill="#d6d6d6" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/></svg>');
+  // 생산기: 쇼케이스에서는 '치료제로 만들고 있습니다' → '완성되었습니다' 두 문구만, 그동안 긴장감이 쌓였다가 완성 순간 풀림
+  MODS.producer.seq=async()=>{ await scSleep(200); document.body.classList.add('scMsg'); stageMsg('단일클론항체를 치료제로 만들고 있습니다.'); scBuild(2.8);
+    await scSleep(2800); stageMsg(null); await scSleep(250); scRelease(); stageMsg('치료제가 완성되었습니다.'); };
+  scReset(); setTimeout(layout,50);
+  for(;;){ await scTitleCard(); SC_RAT=RATS[Math.random()*RATS.length|0]; await scRun(); await scEndCard(); scReset(); }
 }
 
 /* ---------------- 시작 ---------------- */
@@ -1502,12 +1979,12 @@ function start(){
   if(sv&&sv.phase!=='tutorial'){ S=Object.assign(freshState(),sv); if(S.player){ PL.x=S.player.x; PL.y=S.player.y; PL.dir=S.player.dir||'up'; } }
   else if(SHORT.on){ S=shortState(); shortFresh=true; }
   if(blocked(PL.x,PL.y)){ PL.x=11.5*TW+8; PL.y=12*TW+8; } // 맵 배치가 바뀌어 저장된 위치가 사물 안이면 출입문 앞으로
-  renderInv(); setPhaseLabel(); msgUpdate(); requestAnimationFrame(frame);
+  renderInv(); setPhaseLabel(); renderLog(); msgUpdate(); requestAnimationFrame(frame);
+  if(SHOWCASE){ scBoot(); return; }
   if(shortFresh) shortIntro();
-  else if(S.phase==='tutorial') runTutorial();
-  else if(S.flags.finished) showEnd(true);
-  else if(S.flags.treatmentZDone) ending2Prompt();
-  else if(S.flags.treatmentYDone&&!S.flags.ending1Seen) ending1Prompt();
+  else if(SHORT.on){ if(S.flags.finished) showEnd(true); else if(S.flags.treatmentZDone) ending2Prompt(); else if(S.flags.treatmentYDone&&!S.flags.ending1Seen) ending1Prompt(); }
+  else if(!S.flags.started) startIntro();    // 처음 접속: 시작 안내 → '시작하기'
+  else resumeFlows();                        // 치료제 투여 안내 도중에 나갔다면 이어서
 }
 (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(start,start);
 </script>
