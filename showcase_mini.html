@@ -196,6 +196,12 @@ body.showcase #desc{filter:brightness(.85) saturate(.6)}
 .scCard .go{margin-top:34px;font-size:17px;padding:11px 26px;color:#ddd;border-color:rgba(200,200,200,.6);letter-spacing:.06em}
 .scCard .go:hover{background:rgba(160,0,0,.25);border-color:#d66}
 @keyframes scFlk{0%,41%,45%,79%,100%{opacity:1}42%,44%{opacity:.45}80%{opacity:.7}}
+/* 일시정지 버튼(왼쪽 위): 눌러도 화면에 따로 표시하지 않고 그대로 멈추기만 함. 이 구역에서는 실제 마우스 커서가 보임 */
+#scPauseZone{position:fixed;left:0;top:0;width:110px;height:90px;z-index:615;cursor:default;display:none}
+#scPause{position:absolute;left:8px;top:8px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.35);border-radius:4px;cursor:pointer;opacity:.6}
+#scPause:hover{opacity:1;border-color:rgba(255,255,255,.8)}
+#scPause svg{width:12px;height:12px;fill:#ddd}
 </style>
 </head>
 <body>
@@ -1763,7 +1769,7 @@ function scTick(){ const x=MAPR.left+PL.x*MAPR.s, y=MAPR.top+(PL.y-8)*MAPR.s, r=
   document.body.classList.toggle('scPop',!!popupMod); requestAnimationFrame(scTick); }
 
 // ---- 사운드: Web Audio로 직접 합성 (낮은 저음 드론 앰비언트 + 공포 영화풍 효과음) ----
-function scAC(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state!=='running'&&AC.resume) AC.resume(); }catch(e){ return null; } return AC; }
+function scAC(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state!=='running'&&AC.resume&&!SCP.on) AC.resume(); }catch(e){ return null; } return AC; }   // 일시정지 중에는 소리를 다시 켜지 않음
 let scNoiseBuf=null, scVerbN=null, scFxG=null;
 function scNoise(){ if(!scNoiseBuf){ const len=AC.sampleRate*2|0; scNoiseBuf=AC.createBuffer(1,len,AC.sampleRate); const ch=scNoiseBuf.getChannelData(0); for(let i=0;i<len;i++) ch[i]=Math.random()*2-1; } return scNoiseBuf; }
 function scVerb(){ if(!scVerbN){ const len=AC.sampleRate*3.2|0, b=AC.createBuffer(2,len,AC.sampleRate);
@@ -1980,6 +1986,34 @@ async function scRunMini(){
   }catch(e){ console.error(e); }
 }
 
+// ---- 일시정지 (왼쪽 위 버튼) ----
+// 누르면 아무 표시 없이 그 순간의 화면 그대로 멈추고, 다시 누르면 멈춘 곳부터 이어서 재생된다.
+// 쇼케이스는 타이머(setTimeout)·화면 갱신(requestAnimationFrame)·애니메이션·소리·시간(performance.now)으로 진행되므로 이것들을 함께 멈춘다.
+const SCP={on:false,at:0,off:0,timers:new Map(),id:1e9,raf:[],anims:[],sweep:null};
+const _st=setTimeout.bind(window), _ct=clearTimeout.bind(window), _raf=requestAnimationFrame.bind(window), _pnow=performance.now.bind(performance), _animate=Element.prototype.animate;
+function scPauseInstall(){
+  performance.now=()=>(SCP.on?SCP.at:_pnow())-SCP.off;   // 멈춘 동안은 시간도 흐르지 않음
+  window.setTimeout=(fn,ms,...args)=>{ const id=SCP.id++, d=Math.max(0,+ms||0), r={fn,args,due:performance.now()+d,real:null}; SCP.timers.set(id,r);
+    if(!SCP.on) r.real=_st(()=>scTimerFire(id),d); return id; };
+  window.clearTimeout=id=>{ const r=SCP.timers.get(id); if(!r) return _ct(id); if(r.real!=null) _ct(r.real); SCP.timers.delete(id); };
+  window.requestAnimationFrame=cb=>_raf(ts=>{ if(SCP.on) SCP.raf.push(cb); else cb(ts); });
+  Element.prototype.animate=function(...a){ const an=_animate.apply(this,a); if(SCP.on){ an.pause(); SCP.anims.push(an); } return an; };
+}
+function scTimerFire(id){ const r=SCP.timers.get(id); if(!r) return; SCP.timers.delete(id); if(typeof r.fn==='function') r.fn(...r.args); }
+function scFreezeAnims(){ document.getAnimations().forEach(a=>{ if(a.playState==='running'){ try{ a.pause(); SCP.anims.push(a); }catch(e){} } }); }
+function scPauseToggle(){
+  if(!SCP.on){ SCP.on=true; SCP.at=_pnow();
+    SCP.timers.forEach(r=>{ if(r.real!=null){ _ct(r.real); r.real=null; } });
+    scFreezeAnims(); SCP.sweep=setInterval(scFreezeAnims,100);   // 멈추는 순간 막 시작된 전환 효과까지 붙잡음
+    try{ if(AC&&AC.state==='running') AC.suspend(); }catch(e){}
+  } else { clearInterval(SCP.sweep); SCP.off+=_pnow()-SCP.at; SCP.on=false;
+    try{ if(AC&&AC.state==='suspended') AC.resume(); }catch(e){}
+    SCP.anims.splice(0).forEach(a=>{ try{ if(a.playState==='paused') a.play(); }catch(e){} });
+    const now=performance.now(); SCP.timers.forEach((r,id)=>{ if(r.real==null) r.real=_st(()=>scTimerFire(id),Math.max(0,r.due-now)); });
+    SCP.raf.splice(0).forEach(cb=>_raf(cb)); }
+}
+let scPauseZone=null;
+
 // ---- 시작 화면 · 마지막 화면 ----
 function scTitleCard(){ return new Promise(res=>{
   const el=scMake(`<div class="scCard"><h1>좀비 바이러스 치료제를 만들어라</h1>
@@ -2005,8 +2039,14 @@ async function scBoot(){
   // 생산기: 쇼케이스에서는 '치료제로 만들고 있습니다' → '완성되었습니다' 두 문구만, 그동안 긴장감이 쌓였다가 완성 순간 풀림
   MODS.producer.seq=async()=>{ await scSleep(SHOWCASE_MINI?50:200); document.body.classList.add('scMsg'); stageMsg('단일클론항체를 치료제로 만들고 있습니다.'); const mk=SHOWCASE_MINI?1300:2800; scBuild(mk/1000);
     await scSleep(mk); stageMsg(null); await scSleep(250); scRelease(); stageMsg('치료제가 완성되었습니다.'); };
+  scPauseInstall();
+  scPauseZone=scMake('<div id="scPauseZone"><button id="scPause" aria-label="일시정지"><svg viewBox="0 0 12 12"><rect x="2" y="1.5" width="3" height="9"/><rect x="7" y="1.5" width="3" height="9"/></svg></button></div>');
+  scPauseZone.querySelector('#scPause').onclick=e=>{ e.stopPropagation(); scPauseToggle(); };
+  addEventListener('pointerdown',e=>{ if(e.target.closest&&e.target.closest('#scPauseZone')) e.stopPropagation(); },true);   // 버튼을 눌러도 다른 동작이 끼어들지 않게
   scReset(); setTimeout(layout,50);
-  for(;;){ await scTitleCard(); SC_RAT=RATS[Math.random()*RATS.length|0]; await (SHOWCASE_MINI?scRunMini():scRun()); await scEndCard(); scReset(); }
+  for(;;){ await scTitleCard(); SC_RAT=RATS[Math.random()*RATS.length|0];
+    scPauseZone.style.display='block'; await (SHOWCASE_MINI?scRunMini():scRun()); scPauseZone.style.display='none';   // 재생 중에만 버튼 표시
+    await scEndCard(); scReset(); }
 }
 
 /* ---------------- 시작 ---------------- */
